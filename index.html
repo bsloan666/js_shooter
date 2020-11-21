@@ -179,25 +179,17 @@ function draw_blast(ctx, wid, hei) {
         geo[0][index][2] += bz 
     }
     var points = camera_transform( wid, hei, geo[0]);
-    ctx.beginPath();
     ctx.moveTo(points[0][0], points[0][1]); 
     ctx.lineTo(points[4][0], points[4][1]); 
-    ctx.closePath();
     ctx.stroke();
-    ctx.beginPath();
     ctx.moveTo(points[1][0], points[1][1]); 
     ctx.lineTo(points[5][0], points[5][1]); 
-    ctx.closePath();
     ctx.stroke();
-    ctx.beginPath();
     ctx.moveTo(points[2][0], points[2][1]); 
     ctx.lineTo(points[6][0], points[6][1]); 
-    ctx.closePath();
     ctx.stroke();
-    ctx.beginPath();
     ctx.moveTo(points[3][0], points[3][1]); 
     ctx.lineTo(points[7][0], points[7][1]); 
-    ctx.closePath();
     ctx.stroke();
     
 
@@ -206,10 +198,8 @@ function draw_blast(ctx, wid, hei) {
 function draw_ground(ctx, wid, hei){
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 1
-    ctx.beginPath();
     ctx.moveTo(0, hei/2); 
     ctx.lineTo(wid, hei/2); 
-    ctx.closePath();
     ctx.stroke();
      
 }
