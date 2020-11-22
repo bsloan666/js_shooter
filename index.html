@@ -19,9 +19,12 @@ function handleKey(event){
     }
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
-        document.getElementById("blast_trnz").value = 0.3 
+        document.getElementById("blast_trnz").value = 0.3
+        //var audio = new Audio('resources/audio/blast.mp3');
+        var audio = new Audio('resources/audio/blast.ogg');
+        audio.play();
     }
-    console.log(event.keyCode)
+    // console.log(event.keyCode)
     document.getElementById("o_trnx").value = tx 
     document.getElementById("o_trnz").value = tz 
 }
