@@ -34,13 +34,7 @@ function sync_state() {
             var scene = JSON.parse(this.responseText);
             for (i = 0; i < scene.length; i++) {
                 drawable = scene[i];
-                name = drawable['name'];
-                pos = drawable['position'];
-                vel = drawable['velocity'];
-                ori = drawable['orientation'];
-                hel = drawable['health'];
-                sco = drawable['score'];
-                console.log(name,pos,ori,hel,sco)    
+                console.log(drawable)    
             }
         }
     };
