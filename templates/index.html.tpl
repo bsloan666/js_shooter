@@ -2,6 +2,60 @@
 <html>
 <head>
 <script>
+function createUser() {
+    var name = document.getElementById("player_name").innerText;
+    if(name === "" ||  name === "None") {
+        var person = prompt("Please enter a name for your player", "Finky");
+        
+        var form = document.createElement("form");
+
+        form.method = "POST";
+        form.action = "/";   
+
+        document.getElementById("player_name").innerText = person
+        var name = document.createElement("input"); 
+        name.value=person;
+        name.name="player_name";
+        form.appendChild(name);  
+
+        document.body.appendChild(form);
+
+        form.submit();
+    }
+}
+
+function sync_state() {
+    var xhttp = new XMLHttpRequest();
+    var url = "/sync_state";
+    var data = new FormData();
+    var i;
+    xhttp.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            var scene = JSON.parse(this.responseText);
+            for (i = 0; i < scene.length; i++) {
+                drawable = scene[i];
+                name = drawable['name'];
+                pos = drawable['position'];
+                vel = drawable['velocity'];
+                ori = drawable['orientation'];
+                hel = drawable['health'];
+                sco = drawable['score'];
+                console.log(name,pos,ori,hel,sco)    
+            }
+        }
+    };
+    var name = document.getElementById("player_name").innerText  
+    var orientation = Number(document.getElementById("o_roty").innerText)  
+    var posx = Number(document.getElementById("o_trnx").innerText)  
+    var posz = Number(document.getElementById("o_trnz").innerText)  
+    xhttp.open("POST", url, true);
+    data.append('player_name', name);
+    data.append('player_orientation', orientation);
+    data.append('player_posx', posx);
+    data.append('player_posz', posz);
+    xhttp.send(data);
+}
+
 function handleKey(event){
     var tx = Number(document.getElementById("o_trnx").value)  
     var tz = Number(document.getElementById("o_trnz").value)  
@@ -20,9 +74,9 @@ function handleKey(event){
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
         document.getElementById("blast_trnz").value = 0.3
-        //var audio = new Audio('resources/audio/blast.mp3');
-        var audio = new Audio('resources/audio/blast.ogg');
+        var audio = new Audio('static/audio/blast.ogg');
         audio.play();
+        sync_state();
     }
     // console.log(event.keyCode)
     document.getElementById("o_trnx").value = tx 
@@ -30,9 +84,19 @@ function handleKey(event){
 }
 </script>
 </head>
-<body bgcolor="black"  onkeydown="handleKey(event)">
+<body bgcolor="black" onload="createUser()" onkeydown="handleKey(event)">
 <center>
-<canvas id="myCanvas" width="720" height="720"></canvas><br/>
+<p>
+&nbsp;<div style="color: white; font-family: helvetica; display: inline;"> name:</div>&nbsp;
+<div id="player_name" style="color: white; font-family: helvetica; display: inline;">{{ player_name }}</div>
+&nbsp;<div style="color: white; font-family: helvetica; display: inline;"> score:</div>&nbsp;
+<div id="player_score" style="color: white; font-family: helvetica; display: inline;">0</div>
+&nbsp;<div style="color: white; font-family: helvetica; display: inline;"> health:</div>&nbsp;
+<div id="player_health" style="color: white; font-family: helvetica; display: inline;">100</div>
+&nbsp;<div style="color: white; font-family: helvetica; display: inline;"> time:</div>&nbsp;
+<div id="game_time" style="color: white; font-family: helvetica; display: inline;">0</div>
+</p>
+<canvas id="myCanvas" width="1024" height="640"></canvas><br/>
 <input type="hidden" id="s_rotx" value="0.0"/>
 <input type="hidden" id="s_roty" value="0.0"/>
 <input type="hidden" id="s_rotz" value="0.0"/>
@@ -49,7 +113,6 @@ function handleKey(event){
 <input type="hidden" id="is_blast" value="0"/>
 <br/>
 <script>
-
 
 function cube() {
    var positions=[
@@ -136,6 +199,7 @@ function test_face(points, face){
         return false;
     }
 }
+
 function camera_transform(wid, hei, points){
     var index;
     var coords = [
@@ -150,7 +214,7 @@ function camera_transform(wid, hei, points){
     ]    
     for( index = 0; index < points.length; index++ ){
         coords[index][0] = ((points[index][0])/(points[index][2]))*hei+wid/2;
-        coords[index][1] = ((points[index][1])/(points[index][2]))*hei+wid/2;
+        coords[index][1] = ((points[index][1])/(points[index][2]))*hei+hei/2;
         coords[index][2] = points[index][2];
     }
     return coords;
@@ -194,8 +258,6 @@ function draw_blast(ctx, wid, hei) {
     ctx.moveTo(points[3][0], points[3][1]); 
     ctx.lineTo(points[7][0], points[7][1]); 
     ctx.stroke();
-    
-
 }
 
 function draw_ground(ctx, wid, hei){
@@ -208,8 +270,8 @@ function draw_ground(ctx, wid, hei){
 }
 
 function myDraw() {
-    var cnv_width = 720;
-    var cnv_height = 720;
+    var cnv_width = 1024;
+    var cnv_height = 640;
     var cnvs = document.getElementById("myCanvas");
     var ctx = cnvs.getContext("2d");
     ctx.fillStyle = "#000000";
@@ -219,26 +281,38 @@ function myDraw() {
     var index;
     var coords = world_transform( geo[0]);
     var flat_coords = camera_transform(cnv_width, cnv_height, coords);
+
     for( index = 0; index < geo[1].length; index++){
         draw_face(ctx, flat_coords, geo[1][index]); 
     }
+
+    var tz = Number(document.getElementById("o_trnz").value);
+    var tx = Number(document.getElementById("o_trnx").value);
+    var fontsize = 100/tz;
+
+    ctx.font = fontsize+"px Arial";
+    ctx.fillStyle = "#FFFFFF";
+    var tdims = ctx.measureText("Bob");
+    ctx.fillText("Bob", (tx/tz)*cnv_height+cnv_width/2-tdims.width/2, cnv_height/2 - (0.7/tz)*cnv_height);
+
     var isBlast = Number(document.getElementById("is_blast").value);
     if(isBlast === 1) {
         draw_blast(ctx, cnv_width, cnv_height)
     }
 }
+
 function step(){
     var ry = Number(document.getElementById("o_roty").value)
     var rz = Number(document.getElementById("o_rotz").value)
-    ry += 0.01
-    rz += 0.005
+    // ry += 0.01
+    // rz += 0.005
     var tx = Number(document.getElementById("o_trnx").value) 
     var ty = Number(document.getElementById("o_trny").value)
     var tz = Number(document.getElementById("o_trnz").value)
-    var bz = Number(document.getElementById("blast_trnz").value)  
-    //tx += 0.002
-    //ty += 0.001
-    //tz += 0.003
+    var bz = Number(document.getElementById("blast_trnz").value) 
+    var gt = Number(document.getElementById("game_time").innerText) 
+
+    gt+=1;
     if(Number(document.getElementById("is_blast").value) === 1) {
         bz += 0.3;
     }
@@ -252,6 +326,7 @@ function step(){
     document.getElementById("o_trny").value = ty 
     document.getElementById("o_trnz").value = tz 
     document.getElementById("blast_trnz").value = bz 
+    document.getElementById("game_time").innerText = gt 
     myDraw();
     window.requestAnimationFrame(step)
 }
