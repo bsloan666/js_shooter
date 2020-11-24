@@ -10,7 +10,7 @@ class Player():
     def __init__(self, name):
         twopi = 3.14159 * 2
         self.name = name
-        self.position = [random.random()-0.5, random.random()-0.55] 
+        self.position = [(random.random()-0.5) * 10, (random.random()-0.5) * 10] 
         self.velocity = [0.0, 0.0] 
         # some direction around the Y axis
         self.orientation = random.random() * twopi

@@ -27,8 +27,6 @@ ABORT = False
 
 APP = Flask(__name__)
 
-FAKE_SALT = os.getenv('FAKE_SALT', 'r01YxUMwfHJvWQak')
-
 @APP.route('/', methods=['GET', 'POST'])
 def index():
     """
@@ -51,6 +49,8 @@ def sync_state():
     p = player.find(name)
     p.orientation = p_o
     p.position = [p_posx, p_posz]
+
+    print(str(p))
 
     p.save()
     
