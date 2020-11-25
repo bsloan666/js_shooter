@@ -1,22 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-<script>
+
 function createUser() {
     var name = document.getElementById("player_name").innerText;
     if(name === "" ||  name === "None") {
         var person = prompt("Please enter a name for your player", "Finky");
-        document.getElementById("player_name").innerText = person
         
         var form = document.createElement("form");
-        var element1 = document.createElement("input"); 
 
         form.method = "POST";
         form.action = "/";   
 
-        element1.value=person;
-        element1.name="player_name";
-        form.appendChild(element1);  
+        document.getElementById("player_name").innerText = person
+        var name = document.createElement("input"); 
+        name.value=person;
+        name.name="player_name";
+        form.appendChild(name);  
 
         document.body.appendChild(form);
 
@@ -24,62 +21,68 @@ function createUser() {
     }
 }
 
+function sync_state() {
+    var xhttp = new XMLHttpRequest();
+    var url = "/sync_state";
+    var data = new FormData();
+    var i;
+
+    xhttp.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            var scene = JSON.parse(this.responseText);
+            for (i = 0; i < scene.length; i++) {
+                document.getElementById(i).value = JSON.stringify(scene[i]);
+            }
+        }
+    };
+
+    var name = document.getElementById("player_name").innerText;
+    var orientation = Number(document.getElementById("o_roty").value);
+    var posx = Number(document.getElementById("o_trnx").value);
+    var posz = Number(document.getElementById("o_trnz").value);
+
+    console.log(name + " " + orientation + " " + posx + " " + posz);
+
+    xhttp.open("POST", url, true);
+    data.append('player_name', name);
+    data.append('player_orientation', orientation);
+    data.append('player_posx', posx);
+    data.append('player_posz', posz);
+
+    
+    xhttp.send(data);
+}
+
 function handleKey(event){
+    var ry = Number(document.getElementById("o_roty").value)  
     var tx = Number(document.getElementById("o_trnx").value)  
     var tz = Number(document.getElementById("o_trnz").value)  
     if(event.keyCode == 37){
-        tx += 0.1;
+        ry += 0.1;
     }
     if(event.keyCode == 38){
-        tz -= 0.1
+        tz -= Math.cos(ry) * 0.1;
+        tx -= Math.sin(ry) * 0.1;
     }
     if(event.keyCode == 39){
-        tx -= 0.1;
+        ry -= 0.1;
     }
     if(event.keyCode == 40){
-        tz += 0.1
+        tz += Math.cos(ry) * 0.1;
+        tx += Math.sin(ry) * 0.1;
     }
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
         document.getElementById("blast_trnz").value = 0.3
         var audio = new Audio('static/audio/blast.ogg');
         audio.play();
+        sync_state();
     }
     // console.log(event.keyCode)
+    document.getElementById("o_roty").value = ry 
     document.getElementById("o_trnx").value = tx 
     document.getElementById("o_trnz").value = tz 
 }
-</script>
-</head>
-<body bgcolor="black" onload="createUser()" onkeydown="handleKey(event)">
-<center>
-<p>
-&nbsp;<div style="color: white; font-family: helvetica; display: inline;"> name:</div>&nbsp;
-<div id="player_name" style="color: white; font-family: helvetica; display: inline;">{{ player_name }}</div>
-&nbsp;<div style="color: white; font-family: helvetica; display: inline;"> score:</div>&nbsp;
-<div id="player_score" style="color: white; font-family: helvetica; display: inline;">0</div>
-&nbsp;<div style="color: white; font-family: helvetica; display: inline;"> health:</div>&nbsp;
-<div id="player_health" style="color: white; font-family: helvetica; display: inline;">100</div>
-&nbsp;<div style="color: white; font-family: helvetica; display: inline;"> time:</div>&nbsp;
-<div id="game_time" style="color: white; font-family: helvetica; display: inline;">0</div>
-</p>
-<canvas id="myCanvas" width="1024" height="640"></canvas><br/>
-<input type="hidden" id="s_rotx" value="0.0"/>
-<input type="hidden" id="s_roty" value="0.0"/>
-<input type="hidden" id="s_rotz" value="0.0"/>
-<input type="hidden" id="s_trnx" value="0.0"/>
-<input type="hidden" id="s_trny" value="0.0"/>
-<input type="hidden" id="s_trnz" value="10.1"/>
-<input type="hidden" id="o_rotx" value="0.0"/>
-<input type="hidden" id="o_roty" value="0.0"/>
-<input type="hidden" id="o_rotz" value="0.0"/>
-<input type="hidden" id="o_trnx" value="0.0"/>
-<input type="hidden" id="o_trny" value="0.0"/>
-<input type="hidden" id="o_trnz" value="5.1"/>
-<input type="hidden" id="blast_trnz" value="0.0"/>
-<input type="hidden" id="is_blast" value="0"/>
-<br/>
-<script>
 
 function cube() {
    var positions=[
@@ -101,44 +104,6 @@ function cube() {
         [4, 0, 3, 7]
    ]
    return [positions, connectivity];
-}
-
-function world_transform(points){
-    var index;
-    var coords = [
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0]
-    ]
-    var ang = [Number(document.getElementById("o_rotx").value), Number(document.getElementById("o_roty").value), Number(document.getElementById("o_rotz").value)]; 
-    var translate = [Number(document.getElementById("o_trnx").value), Number(document.getElementById("o_trny").value), Number(document.getElementById("o_trnz").value)];
-
-    var rotate=[
-        [Math.cos(ang[0]) * Math.cos(ang[1]), 
-            Math.cos(ang[0]) * Math.sin(ang[1]) * Math.sin(ang[2]) - Math.sin(ang[0]) * Math.cos(ang[2]), 
-            Math.cos(ang[0]) * Math.sin(ang[1]) * Math.cos(ang[2]) + Math.sin(ang[0]) * Math.sin(ang[2])],
-        [Math.sin(ang[0]) * Math.cos(ang[1]), 
-            Math.sin(ang[0]) * Math.sin(ang[1]) * Math.sin(ang[2]) + Math.cos(ang[0]) * Math.cos(ang[2]), 
-            Math.sin(ang[0]) * Math.sin(ang[1]) * Math.cos(ang[2]) - Math.cos(ang[0]) * Math.sin(ang[2])],
-        [Math.sin(ang[1]) * -1, 
-            Math.cos(ang[1]) * Math.sin(ang[2]), 
-            Math.cos(ang[1]) * Math.cos(ang[2])] 
-    ];
-    
-    for( index = 0; index < points.length; index++){
-        coords[index][0] = rotate[0][0] * points[index][0] + rotate[0][1] * points[index][1] + rotate[0][2] * points[index][2];    
-        coords[index][1] = rotate[1][0] * points[index][0] + rotate[1][1] * points[index][1] + rotate[1][2] * points[index][2];    
-        coords[index][2] = rotate[2][0] * points[index][0] + rotate[2][1] * points[index][1] + rotate[2][2] * points[index][2]; 
-        coords[index][0] += translate[0];
-        coords[index][1] += translate[1];
-        coords[index][2] += translate[2];
-    }
-    return coords;
 }
 
 function cross_product(ax, ay, az, bx, by, bz){
@@ -167,6 +132,45 @@ function test_face(points, face){
     }
 }
 
+function world_transform(points, ry, tx, tz){
+    var index;
+    var coords = [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+    ]
+    var ang = [0.0, ry, 0.0]; 
+    var translate = [ tx, 0.0, tz];
+
+    var rotate=[
+        [Math.cos(ang[0]) * Math.cos(ang[1]), 
+            Math.cos(ang[0]) * Math.sin(ang[1]) * Math.sin(ang[2]) - Math.sin(ang[0]) * Math.cos(ang[2]), 
+            Math.cos(ang[0]) * Math.sin(ang[1]) * Math.cos(ang[2]) + Math.sin(ang[0]) * Math.sin(ang[2])],
+        [Math.sin(ang[0]) * Math.cos(ang[1]), 
+            Math.sin(ang[0]) * Math.sin(ang[1]) * Math.sin(ang[2]) + Math.cos(ang[0]) * Math.cos(ang[2]), 
+            Math.sin(ang[0]) * Math.sin(ang[1]) * Math.cos(ang[2]) - Math.cos(ang[0]) * Math.sin(ang[2])],
+        [Math.sin(ang[1]) * -1, 
+            Math.cos(ang[1]) * Math.sin(ang[2]), 
+            Math.cos(ang[1]) * Math.cos(ang[2])] 
+    ];
+    
+    for( index = 0; index < points.length; index++){
+        coords[index][0] = rotate[0][0] * points[index][0] + rotate[0][1] * points[index][1] + rotate[0][2] * points[index][2];    
+        coords[index][1] = rotate[1][0] * points[index][0] + rotate[1][1] * points[index][1] + rotate[1][2] * points[index][2];    
+        coords[index][2] = rotate[2][0] * points[index][0] + rotate[2][1] * points[index][1] + rotate[2][2] * points[index][2]; 
+        coords[index][0] += translate[0];
+        coords[index][1] += translate[1];
+        coords[index][2] += translate[2];
+    }
+    return coords;
+}
+
+
 function camera_transform(wid, hei, points){
     var index;
     var coords = [
@@ -179,12 +183,49 @@ function camera_transform(wid, hei, points){
         [0, 0, 0],
         [0, 0, 0]
     ]    
+    var rotcoords = [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+    ]    
+    var ry = Number(document.getElementById("o_roty").value)
+    var ang = [0.0, ry, 0.0];
+    var rotate=[
+        [Math.cos(ang[0]) * Math.cos(ang[1]), 
+            Math.cos(ang[0]) * Math.sin(ang[1]) * Math.sin(ang[2]) - Math.sin(ang[0]) * Math.cos(ang[2]), 
+            Math.cos(ang[0]) * Math.sin(ang[1]) * Math.cos(ang[2]) + Math.sin(ang[0]) * Math.sin(ang[2])],
+        [Math.sin(ang[0]) * Math.cos(ang[1]), 
+            Math.sin(ang[0]) * Math.sin(ang[1]) * Math.sin(ang[2]) + Math.cos(ang[0]) * Math.cos(ang[2]), 
+            Math.sin(ang[0]) * Math.sin(ang[1]) * Math.cos(ang[2]) - Math.cos(ang[0]) * Math.sin(ang[2])],
+        [Math.sin(ang[1]) * -1, 
+            Math.cos(ang[1]) * Math.sin(ang[2]), 
+            Math.cos(ang[1]) * Math.cos(ang[2])] 
+    ];
+    var tx = Number(document.getElementById("o_trnx").value) 
+    var tz = Number(document.getElementById("o_trnz").value)
+
     for( index = 0; index < points.length; index++ ){
-        coords[index][0] = ((points[index][0])/(points[index][2]))*hei+wid/2;
-        coords[index][1] = ((points[index][1])/(points[index][2]))*hei+hei/2;
-        coords[index][2] = points[index][2];
+        //rotcoords[index][0] = rotate[0][0] * points[index][0] + rotate[0][1] * points[index][1] + rotate[0][2] * points[index][2];    
+        //rotcoords[index][1] = rotate[1][0] * points[index][0] + rotate[1][1] * points[index][1] + rotate[1][2] * points[index][2];    
+        //rotcoords[index][2] = rotate[2][0] * points[index][0] + rotate[2][1] * points[index][1] + rotate[2][2] * points[index][2];
+        //coords[index][0] = ((rotcoords[index][0]-tx)/(rotcoords[index][2]+tz))*hei+wid/2;
+        //coords[index][1] = ((rotcoords[index][1])/(rotcoords[index][2]+tz))*hei+hei/2;
+        //coords[index][2] = rotcoords[index][2]+tz;
+
+        coords[index][0] = ((points[index][0]-tx)/(points[index][2]+tz))*hei+wid/2;
+        coords[index][1] = ((points[index][1])/(points[index][2]+tz))*hei+hei/2;
+        coords[index][2] = points[index][2]+tz;
+        rotcoords[index][0] = rotate[0][0] * coords[index][0] + rotate[0][1] * coords[index][1] + rotate[0][2] * coords[index][2];    
+        rotcoords[index][1] = rotate[1][0] * coords[index][0] + rotate[1][1] * coords[index][1] + rotate[1][2] * coords[index][2];    
+        rotcoords[index][2] = rotate[2][0] * coords[index][0] + rotate[2][1] * coords[index][1] + rotate[2][2] * coords[index][2];
     }
-    return coords;
+    //return coords;
+    return rotcoords;
 }
 
 function draw_face(ctx, points, face){
@@ -208,11 +249,13 @@ function draw_face(ctx, points, face){
 function draw_blast(ctx, wid, hei) {
     var geo = cube();
     var index;
-    var bz = Number(document.getElementById("blast_trnz").value)  
+    var bz = Number(document.getElementById("blast_trnz").value)
+
     for (index = 0; index < geo[0].length; index++) {
         geo[0][index][2] += bz 
     }
     var points = camera_transform( wid, hei, geo[0]);
+
     ctx.moveTo(points[0][0], points[0][1]); 
     ctx.lineTo(points[4][0], points[4][1]); 
     ctx.stroke();
@@ -227,40 +270,61 @@ function draw_blast(ctx, wid, hei) {
     ctx.stroke();
 }
 
-function draw_ground(ctx, wid, hei){
+function draw_ground(ctx, wid, hei) {
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 1
     ctx.moveTo(0, hei/2); 
     ctx.lineTo(wid, hei/2); 
     ctx.stroke();
-     
 }
 
+function drawPlayer(ctx, geo, player) {
+    var wid = ctx.canvas.width;
+    var hei = ctx.canvas.height;
+    var index;
+
+    var tx = player['position'][0];
+    var tz = player['position'][1];
+    var ry = player['orientation'];
+
+    var coords = world_transform( geo[0], ry, tx, tz);
+    var flat_coords = camera_transform(wid, hei, coords);
+    //if(flat_coords[0][2] < 0.0) { 
+        for( index = 0; index < geo[1].length; index++) {
+            draw_face(ctx, flat_coords, geo[1][index]);
+        }
+        var fontsize = 100/flat_coords[0][2];
+
+        ctx.font = fontsize+"px Arial";
+        ctx.fillStyle = "#FFFFFF";
+        var tdims = ctx.measureText(player['name']);
+        ctx.fillText(player['name'], flat_coords[0][0], flat_coords[0][1]);
+    //}
+}
+
+
 function myDraw() {
-    var cnv_width = 1024;
-    var cnv_height = 640;
+
     var cnvs = document.getElementById("myCanvas");
+    var cnv_width = cnvs.width;
+    var cnv_height = cnvs.height;
     var ctx = cnvs.getContext("2d");
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, cnv_width, cnv_height);
     draw_ground(ctx, cnv_width, cnv_height);
     var geo = cube();
-    var index;
-    var coords = world_transform( geo[0]);
-    var flat_coords = camera_transform(cnv_width, cnv_height, coords);
+    var index = 0;
+    var sindex;
+    var name = document.getElementById("player_name").innerText;
 
-    for( index = 0; index < geo[1].length; index++){
-        draw_face(ctx, flat_coords, geo[1][index]); 
+    var players = document.getElementsByClassName('player');
+
+    for( index = 0; index < players.length; index++) {
+        if(players[index].value != '' && players[index]['name'] != name) {
+            player = JSON.parse(players[index].value);
+            drawPlayer(ctx, geo, player);
+        }
     }
-
-    var tz = Number(document.getElementById("o_trnz").value);
-    var tx = Number(document.getElementById("o_trnx").value);
-    var fontsize = 100/tz;
-
-    ctx.font = fontsize+"px Arial";
-    ctx.fillStyle = "#FFFFFF";
-    var tdims = ctx.measureText("Bob");
-    ctx.fillText("Bob", (tx/tz)*cnv_height+cnv_width/2-tdims.width/2, cnv_height/2 - (0.7/tz)*cnv_height);
 
     var isBlast = Number(document.getElementById("is_blast").value);
     if(isBlast === 1) {
@@ -270,11 +334,7 @@ function myDraw() {
 
 function step(){
     var ry = Number(document.getElementById("o_roty").value)
-    var rz = Number(document.getElementById("o_rotz").value)
-    // ry += 0.01
-    // rz += 0.005
     var tx = Number(document.getElementById("o_trnx").value) 
-    var ty = Number(document.getElementById("o_trny").value)
     var tz = Number(document.getElementById("o_trnz").value)
     var bz = Number(document.getElementById("blast_trnz").value) 
     var gt = Number(document.getElementById("game_time").innerText) 
@@ -288,9 +348,7 @@ function step(){
     }
 
     document.getElementById("o_roty").value = ry
-    document.getElementById("o_rotz").value = rz
     document.getElementById("o_trnx").value = tx 
-    document.getElementById("o_trny").value = ty 
     document.getElementById("o_trnz").value = tz 
     document.getElementById("blast_trnz").value = bz 
     document.getElementById("game_time").innerText = gt 
@@ -298,7 +356,3 @@ function step(){
     window.requestAnimationFrame(step)
 }
 window.requestAnimationFrame(step)
-</script>
-</center>
-</body>
-</html>
