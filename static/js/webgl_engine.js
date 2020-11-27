@@ -22,11 +22,12 @@ function main() {
 
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
+    uniform mat4 uWorldMatrix;
 
     varying lowp vec4 vColor;
 
     void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      gl_Position = uProjectionMatrix * uModelViewMatrix * uWorldMatrix * aVertexPosition;
       vColor = aVertexColor;
     }
   `;
@@ -58,6 +59,7 @@ function main() {
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
       modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+      worldMatrix: gl.getUniformLocation(shaderProgram, 'uWorldMtrix'),
     },
   };
 
@@ -170,6 +172,70 @@ function initBuffers(gl) {
   };
 }
 
+function syncState() {
+    var xhttp = new XMLHttpRequest();
+    var url = "/sync_state";
+    var data = new FormData();
+    var i;
+
+    xhttp.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            var scene = JSON.parse(this.responseText);
+            for (i = 0; i < scene.length; i++) {
+                console.log(scene[i]['name']);
+                document.getElementById(i).value = JSON.stringify(scene[i]);
+            }
+        }
+    };
+
+    var name = document.getElementById("player_name").innerText;
+    var orientation = Number(document.getElementById("o_roty").value);
+    var posx = Number(document.getElementById("o_trnx").value);
+    var posz = Number(document.getElementById("o_trnz").value);
+
+    console.log(name + " " + orientation + " " + posx + " " + posz);
+
+    xhttp.open("POST", url, true);
+    data.append('player_name', name);
+    data.append('player_orientation', orientation);
+    data.append('player_posx', posx);
+    data.append('player_posz', posz);
+
+    xhttp.send(data);
+}
+
+function handleKey(event){
+    var ry = Number(document.getElementById("o_roty").value)  
+    var tx = Number(document.getElementById("o_trnx").value)  
+    var tz = Number(document.getElementById("o_trnz").value)  
+    if(event.keyCode == 37){
+        ry += 0.1;
+    }
+    if(event.keyCode == 38){
+        tz -= 0.1;
+        //tz -= Math.cos(ry) * 0.1;
+        //tx -= Math.sin(ry) * 0.1;
+    }
+    if(event.keyCode == 39){
+        ry -= 0.1;
+    }
+    if(event.keyCode == 40){
+        tz +=  0.1;
+        //tz += Math.cos(ry) * 0.1;
+        //tx += Math.sin(ry) * 0.1;
+    }
+    if(event.keyCode == 32){
+        document.getElementById("is_blast").value = 1 
+        document.getElementById("blast_trnz").value = 0.3
+        var audio = new Audio('static/audio/blast.ogg');
+        audio.play();
+        syncState();
+    }
+    // console.log(event.keyCode)
+    document.getElementById("o_roty").value = ry 
+    document.getElementById("o_trnx").value = tx 
+    document.getElementById("o_trnz").value = tz
+}
 //
 // Draw the scene.
 //
@@ -179,22 +245,15 @@ function drawScene(gl, programInfo, buffers) {
   gl.enable(gl.DEPTH_TEST);           // Enable depth testing
   gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
 
-  // Clear the canvas before we start drawing on it.
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  // Create a perspective matrix, a special matrix that is
-  // used to simulate the distortion of perspective in a camera.
-  // Our field of view is 45 degrees, with a width/height
-  // ratio that matches the display size of the canvas
-  // and we only want to see objects between 0.1 units
-  // and 100 units away from the camera.
 
   const fieldOfView = 45 * Math.PI / 180;   // in radians
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;
   const projectionMatrix = mat4.create();
+  var worldMatrix = mat4.create();
 
   // note: glmatrix.js always has the first argument
   // as the destination to receive the result.
@@ -204,24 +263,20 @@ function drawScene(gl, programInfo, buffers) {
                    zNear,
                    zFar);
 
-  // Set the drawing position to the "identity" point, which is
-  // the center of the scene.
   const modelViewMatrix = mat4.create();
 
-  // Now move the drawing position a bit to where we want to
-  // start drawing the square.
-
+  var ry = Number(document.getElementById("o_roty").value);  
   mat4.rotate(   modelViewMatrix,    
                  modelViewMatrix,
-                 0.16,
+                 ry,
                  [0.0, 1.0, 0.0]);  // axis
 
+  var tx = Number(document.getElementById("o_trnx").value);  
+  var tz = Number(document.getElementById("o_trnz").value);  
   mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
-                 [-0.0, 0.0, -3.0]);  // amount to translate
+                 [-0.0, 0.0, tz]);  // amount to translate
 
-  // Tell WebGL how to pull out the positions from the position
-  // buffer into the vertexPosition attribute
   {
     const numComponents = 3;
     const type = gl.FLOAT;
@@ -240,8 +295,6 @@ function drawScene(gl, programInfo, buffers) {
         programInfo.attribLocations.vertexPosition);
   }
 
-  // Tell WebGL how to pull out the colors from the color buffer
-  // into the vertexColor attribute.
   {
     const numComponents = 4;
     const type = gl.FLOAT;
@@ -275,12 +328,40 @@ function drawScene(gl, programInfo, buffers) {
       false,
       modelViewMatrix);
 
+  gl.uniformMatrix4fv(
+      programInfo.uniformLocations.worldMatrix,
+      false,
+      worldMatrix);
+
+    var index = 0;
+    var name = document.getElementById("player_name").innerText;
+    var players = document.getElementsByClassName('player');
+
   {
-    var offset = 0;
-    for(offset = 0; offset < 24; offset+=4) {
-        gl.drawArrays(gl.LINE_LOOP, offset, 4);
+    for( index = 0; index < players.length; index++) {
+        if(players[index].value != '' && players[index]['name'] != name) {
+            player = JSON.parse(players[index].value);
+            var tx2 = player['position'][0];
+            var tz2 = player['position'][1];
+            var ry2 = player['orientation'];
+            var offset = 0;
+            mat4.identity(worldMatrix);
+            mat4.rotate(worldMatrix,    
+                 worldMatrix,
+                 ry2,
+                 [0.0, 1.0, 0.0]);  // axis
+            mat4.translate(worldMatrix,     // destination matrix
+                 worldMatrix,     // matrix to translate
+                 [tx2, 0.0, tz2]);  // amount to translate
+            for(offset = 0; offset < 24; offset+=4) {
+                gl.drawArrays(gl.LINE_LOOP, offset, 4);
+            }
+        }
     }
   }
+  window.requestAnimationFrame(function() {
+        drawScene(gl, programInfo, buffers);
+  });
 }
 
 //
