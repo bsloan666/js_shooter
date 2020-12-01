@@ -32,6 +32,7 @@ function syncState() {
             var scene = JSON.parse(this.responseText);
             for (i = 0; i < scene.length; i++) {
                 document.getElementById(i).value = JSON.stringify(scene[i]);
+                //console.log(document.getElementById(i).value)
             }
         }
     };
@@ -83,6 +84,8 @@ function handleKey(event){
     document.getElementById("o_roty").value = ry 
     document.getElementById("o_trnx").value = tx 
     document.getElementById("o_trnz").value = tz 
+
+    window.requestAnimationFrame(step)
 }
 
 function cube() {
@@ -153,7 +156,7 @@ function worldTransform(points, ry, tx, tz){
     var ang = [0.0, ry, 0.0]; 
     var translate = [ tx, 0.0, tz];
     
-    var rotate= rotationMatrix(ang);
+    var rotate = rotationMatrix(ang);
     
     for( index = 0; index < points.length; index++){
         coords[index][0] = rotate[0][0] * points[index][0] + rotate[0][1] * points[index][1] + rotate[0][2] * points[index][2];    
@@ -184,16 +187,8 @@ function cameraTransform(wid, hei, points){
         coords[index][0] = ((rotcoords[index][0]-tx)/(rotcoords[index][2]+tz))*hei+wid/2;
         coords[index][1] = ((rotcoords[index][1])/(rotcoords[index][2]+tz))*hei+hei/2;
         coords[index][2] = rotcoords[index][2]+tz;
-
-        //coords[index][0] = ((points[index][0]-tx)/(points[index][2]+tz))*hei+wid/2;
-        //coords[index][1] = ((points[index][1])/(points[index][2]+tz))*hei+hei/2;
-        //coords[index][2] = points[index][2]+tz;
-        //rotcoords[index][0] = rotate[0][0] * coords[index][0] + rotate[0][1] * coords[index][1] + rotate[0][2] * coords[index][2];    
-        //rotcoords[index][1] = rotate[1][0] * coords[index][0] + rotate[1][1] * coords[index][1] + rotate[1][2] * coords[index][2];    
-        //rotcoords[index][2] = rotate[2][0] * coords[index][0] + rotate[2][1] * coords[index][1] + rotate[2][2] * coords[index][2];
     }
     return coords;
-    //return rotcoords;
 }
 
 function drawFace(ctx, points, face){
@@ -244,6 +239,22 @@ function drawBlast(ctx, wid, hei) {
 }
 
 
+function depthSort(pdepths) {
+    var indices = [];
+    var unsorted = [];
+    var i;
+    for(i=0; i < pdepths.length;  i++) {
+        unsorted.push(pdepths[i]) 
+    }
+    pdepths.sort(function(a,b) { return a - b; });
+
+    for(i=pdepths.length-1; i >=0; i--) {
+        indices.push(unsorted.indexOf(pdepths[i]));
+    }
+    return indices;
+}
+
+
 function drawGround(ctx, wid, hei) {
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 1
@@ -252,8 +263,27 @@ function drawGround(ctx, wid, hei) {
     ctx.stroke();
 }
 
+function drawPlayer(ctx, points, player) {
+    var index;
+    var connect = cube()[1];
 
-function drawPlayer(ctx, geo, player) {
+    if(points[0][2] > 0.0) { 
+        for( index = 0; index < connect.length; index++) {
+            drawFace(ctx, points, connect[index]);
+        }
+        var fontsize = 100/points[0][2];
+
+        ctx.font = fontsize+"px Arial";
+        ctx.fillStyle = "#FFFFFF";
+        var tdims = ctx.measureText(player['name']);
+
+        var hoverx = (points[0][0] + points[1][0] + points[2][0] + points[3][0])/4-tdims.width/2;
+        var hovery = points[0][1] * 0.9; 
+        ctx.fillText(player['name'], hoverx, hovery);
+    }
+}
+
+function layoutPlayer(ctx, geo, player) {
     var wid = ctx.canvas.width;
     var hei = ctx.canvas.height;
     var index;
@@ -264,20 +294,14 @@ function drawPlayer(ctx, geo, player) {
 
     var coords = worldTransform( geo[0], ry, tx, tz);
     var flat_coords = cameraTransform(wid, hei, coords);
+    var accum = 0;
 
-    if(flat_coords[0][2] > 0.0) { 
-        for( index = 0; index < geo[1].length; index++) {
-            drawFace(ctx, flat_coords, geo[1][index]);
-        }
-        var fontsize = 100/flat_coords[0][2];
+    for( index = 0; index < flat_coords.length; index++ ) {
+        accum+=flat_coords[index][2]; 
+    }    
 
-        ctx.font = fontsize+"px Arial";
-        ctx.fillStyle = "#FFFFFF";
-        var tdims = ctx.measureText(player['name']);
-        ctx.fillText(player['name'], flat_coords[0][0], flat_coords[0][1]);
-    }
+    return [accum/flat_coords.length, flat_coords];
 }
-
 
 function drawAll() {
     var cnvs = document.getElementById("myCanvas");
@@ -286,16 +310,41 @@ function drawAll() {
     var ctx = cnvs.getContext("2d");
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, cnv_width, cnv_height);
-    drawGround(ctx, cnv_width, cnv_height);
+    //drawGround(ctx, cnv_width, cnv_height);
     var geo = cube();
-    var index = 0;
+    var index;
+    var idx;
     var name = document.getElementById("player_name").innerText;
     var players = document.getElementsByClassName('player');
+    var depth;
+    var coords;
+    var temp;
+
+    var pos_buffer = [];
+    var player_depths = [];
 
     for( index = 0; index < players.length; index++) {
-        if(players[index].value != '' && players[index]['name'] != name) {
+        if(players[index].value != '') {
             player = JSON.parse(players[index].value);
-            drawPlayer(ctx, geo, player);
+            temp = layoutPlayer(ctx, geo, player);
+            depth = temp[0];
+            coords = temp[1];
+            pos_buffer.push(coords)
+            player_depths.push(depth);
+        }
+    }
+
+    var depth_sort = depthSort(player_depths);
+
+    for( index = 0; index < depth_sort.length; index++) {
+        idx = depth_sort[index];
+        if(idx >=0) {
+            if(players[idx].value != '') {
+                player = JSON.parse(players[idx].value);
+                if(player['name'] != name) {
+                    drawPlayer(ctx, pos_buffer[idx], player);
+                }
+            }
         }
     }
 
@@ -320,6 +369,6 @@ function step(){
     document.getElementById("blast_trnz").value = bz 
     document.getElementById("game_time").innerText = gt 
     drawAll();
-    window.requestAnimationFrame(step)
+    //window.requestAnimationFrame(step)
 }
 window.requestAnimationFrame(step)

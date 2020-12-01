@@ -27,7 +27,8 @@ function main() {
     varying lowp vec4 vColor;
 
     void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * uWorldMatrix * aVertexPosition;
+      vec4 vp = uWorldMatrix * aVertexPosition;  
+      gl_Position = uProjectionMatrix * uModelViewMatrix * vp;
       vColor = aVertexColor;
     }
   `;
@@ -253,7 +254,7 @@ function drawScene(gl, programInfo, buffers) {
   const zNear = 0.1;
   const zFar = 100.0;
   const projectionMatrix = mat4.create();
-  var worldMatrix = mat4.create();
+  const worldMatrix = mat4.create();
 
   // note: glmatrix.js always has the first argument
   // as the destination to receive the result.
@@ -328,10 +329,6 @@ function drawScene(gl, programInfo, buffers) {
       false,
       modelViewMatrix);
 
-  gl.uniformMatrix4fv(
-      programInfo.uniformLocations.worldMatrix,
-      false,
-      worldMatrix);
 
     var index = 0;
     var name = document.getElementById("player_name").innerText;
@@ -350,9 +347,13 @@ function drawScene(gl, programInfo, buffers) {
                  worldMatrix,
                  ry2,
                  [0.0, 1.0, 0.0]);  // axis
-            mat4.translate(worldMatrix,     // destination matrix
-                 worldMatrix,     // matrix to translate
-                 [tx2, 0.0, tz2]);  // amount to translate
+            //mat4.translate(worldMatrix,     // destination matrix
+            //     worldMatrix,     // matrix to translate
+            //     [tx2, 0.0, tz2]);  // amount to translate
+            gl.uniformMatrix4fv(
+                 programInfo.uniformLocations.worldMatrix,
+                 false,
+                 worldMatrix);
             for(offset = 0; offset < 24; offset+=4) {
                 gl.drawArrays(gl.LINE_LOOP, offset, 4);
             }

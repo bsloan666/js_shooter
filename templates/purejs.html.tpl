@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="static/js/engine.js"></script>
+<script src="static/js/purejs_engine.js"></script>
 </head>
 <body bgcolor="black" onload="createUser()" onkeydown="handleKey(event)">
 <center>

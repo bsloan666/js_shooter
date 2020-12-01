@@ -65,7 +65,7 @@ if  __name__ == "__main__":
     p3 = Player('Glerg')
     p4 = Player('Porgo')
     
-    p1.save()
+    #p1.save()
     p2.save()
     p3.save()
     p4.save()

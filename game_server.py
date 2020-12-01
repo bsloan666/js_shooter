@@ -37,8 +37,8 @@ def index():
     name = request.form.get('player_name')
 
     print("PLAYER_NAME", name)
-    #return render_template('index.html.tpl', player_name=name) 
-    return render_template('webgl.html.tpl', player_name=name) 
+    return render_template('purejs.html.tpl', player_name=name) 
+    #return render_template('webgl.html.tpl', player_name=name) 
 
 @APP.route('/sync_state', methods=['GET', 'POST'])
 def sync_state():
