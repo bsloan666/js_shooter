@@ -60,15 +60,6 @@ if  __name__ == "__main__":
     red = redis.Redis()
     red.flushdb()
 
-    p1 = Player('Amanda')
-    p2 = Player('Steve')
-    p3 = Player('Glerg')
-    p4 = Player('Porgo')
-    
-    #p1.save()
-    p2.save()
-    p3.save()
-    p4.save()
 
     for key in red.scan_iter("*"):
         print(key)

@@ -88,6 +88,36 @@ function handleKey(event){
     window.requestAnimationFrame(step)
 }
 
+function square() {
+   var positions=[
+        [-1.0, 0.5, -1.0],  
+        [1.0, 0.5, -1.0],  
+        [1.0, 0.5, 1.0],  
+        [-1.0, 0.5, 1.0]
+   ]
+   var connectivity=[
+        [0, 1, 2, 3],
+   ] 
+   return [positions, connectivity];
+}
+
+function octagon() {
+   var positions=[
+        [-0.5, 0.5,-1.0],  
+        [0.5, 0.5, -1.0],  
+        [1.0, 0.5, -0.5],  
+        [1.0, 0.5, 0.5],  
+        [0.5, 0.5, 1.0],  
+        [-0.5, 0.5, 1.0],  
+        [-1.0, 0.5, 0.5],  
+        [-1.0, 0.5, -0.5],  
+   ]
+   var connectivity=[
+        [0, 1, 2, 3, 4, 5, 6, 7],
+   ] 
+   return [positions, connectivity];
+}
+
 function cube() {
    var positions=[
         [-0.5, -0.5, -0.5],  
@@ -150,9 +180,10 @@ function rotationMatrix(ang) {
 }
 
 
-function worldTransform(points, ry, tx, tz){
+function worldTransform(shape, ry, tx, tz){
     var index;
-    var coords =cube()[0]; 
+    var points = shape()[0]; 
+    var coords = shape()[0]; 
     var ang = [0.0, ry, 0.0]; 
     var translate = [ tx, 0.0, tz];
     
@@ -170,10 +201,15 @@ function worldTransform(points, ry, tx, tz){
 }
 
 
-function cameraTransform(wid, hei, points){
+function cameraTransform(shape, ctx, points){
+    var wid = ctx.canvas.width;
+    var hei = ctx.canvas.height;
+
+    //console.log(wid, hei);
+
     var index;
-    var coords = cube()[0]; 
-    var rotcoords = cube()[0]; 
+    var coords = shape()[0]; 
+    var rotcoords = shape()[0]; 
     var ry = Number(document.getElementById("o_roty").value)
     var ang = [0.0, -ry, 0.0];
     var rotate = rotationMatrix(ang) 
@@ -204,25 +240,21 @@ function drawFace(ctx, points, face){
         ctx.lineTo(points[face[2]][0], points[face[2]][1]); 
         ctx.lineTo(points[face[3]][0], points[face[3]][1]); 
         ctx.closePath();
-        ctx.stroke();
         ctx.fill();
+        ctx.stroke();
     }
 }
 
 
-function drawBlast(ctx, wid, hei) {
-    var geo = cube();
+function drawBlast(ctx) {
     var index;
     var bz = Number(document.getElementById("blast_trnz").value)
     var ry = Number(document.getElementById("o_roty").value)
     var tx = Number(document.getElementById("o_trnx").value)
     var tz = Number(document.getElementById("o_trnz").value)
 
-    for (index = 0; index < geo[0].length; index++) {
-        geo[0][index][2] += bz 
-    }
-    var coords = worldTransform( geo[0], ry, tx, tz);
-    var points = cameraTransform( wid, hei, coords);
+    var coords = worldTransform( cube, ry, tx, tz);
+    var points = cameraTransform( cube, ctx, coords);
 
     ctx.moveTo(points[0][0], points[0][1]); 
     ctx.lineTo(points[4][0], points[4][1]); 
@@ -255,11 +287,39 @@ function depthSort(pdepths) {
 }
 
 
-function drawGround(ctx, wid, hei) {
+function drawGround(ctx) {
+    var i;
+
+    var squ_con = square()[1];
+    var oct_con = octagon()[1];
+
+    var points1 = worldTransform(square, 0.0, 5.0, 5.0);
+    var points2 = worldTransform(octagon, 0.0, -5.0, 5.0);
+
+    //console.log("WORLD "+points1);
+
+    var coords1 = cameraTransform(square, ctx, points1); 
+    var coords2 = cameraTransform(octagon, ctx, points2); 
+
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 1
-    ctx.moveTo(0, hei/2); 
-    ctx.lineTo(wid, hei/2); 
+
+    //console.log("CAMERA "+coords1);
+
+    ctx.beginPath();
+    ctx.moveTo(coords1[squ_con[0][0]][0], coords1[squ_con[0][0]][1]);
+    for(i=1; i < squ_con[0].length; i++) {
+        ctx.lineTo(coords1[squ_con[0][i]][0], coords1[squ_con[0][i]][1]);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(coords2[oct_con[0][0]][0], coords2[oct_con[0][0]][1]);
+    for(i=1; i < oct_con[0].length; i++) {
+        ctx.lineTo(coords2[oct_con[0][i]][0], coords2[oct_con[0][i]][1]);
+    }
+    ctx.closePath();
     ctx.stroke();
 }
 
@@ -283,7 +343,7 @@ function drawPlayer(ctx, points, player) {
     }
 }
 
-function layoutPlayer(ctx, geo, player) {
+function layoutPlayer(ctx, player) {
     var wid = ctx.canvas.width;
     var hei = ctx.canvas.height;
     var index;
@@ -292,9 +352,12 @@ function layoutPlayer(ctx, geo, player) {
     var tz = player['position'][1];
     var ry = player['orientation'];
 
-    var coords = worldTransform( geo[0], ry, tx, tz);
-    var flat_coords = cameraTransform(wid, hei, coords);
+    var coords = worldTransform(cube, ry, tx, tz);
+    var flat_coords = cameraTransform(cube, ctx, coords);
+
+    // console.log(flat_coords);
     var accum = 0;
+
 
     for( index = 0; index < flat_coords.length; index++ ) {
         accum+=flat_coords[index][2]; 
@@ -310,8 +373,7 @@ function drawAll() {
     var ctx = cnvs.getContext("2d");
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, cnv_width, cnv_height);
-    //drawGround(ctx, cnv_width, cnv_height);
-    var geo = cube();
+    drawGround(ctx);
     var index;
     var idx;
     var name = document.getElementById("player_name").innerText;
@@ -322,11 +384,11 @@ function drawAll() {
 
     var pos_buffer = [];
     var player_depths = [];
-
+    
     for( index = 0; index < players.length; index++) {
         if(players[index].value != '') {
             player = JSON.parse(players[index].value);
-            temp = layoutPlayer(ctx, geo, player);
+            temp = layoutPlayer(ctx, player);
             depth = temp[0];
             coords = temp[1];
             pos_buffer.push(coords)
@@ -347,7 +409,7 @@ function drawAll() {
             }
         }
     }
-
+    
     var isBlast = Number(document.getElementById("is_blast").value);
     if(isBlast === 1) {
         drawBlast(ctx, cnv_width, cnv_height)
