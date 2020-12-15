@@ -10,6 +10,7 @@ import urllib
 import cgi
 import hashlib
 from base64 import b64encode, b64decode
+import random
 
 from flask import Flask
 from flask import make_response
@@ -21,11 +22,20 @@ from flask import jsonify
 
 import requests
 import server.player as player
-
+import server.names as names
 
 ABORT = False
 
 APP = Flask(__name__)
+
+@APP.route('/name_suggest', methods=['GET', 'POST'])
+def name_suggest():
+    """
+    main entrypoint
+    """
+    base = "http://{}/".format(request.environ['HTTP_HOST'])
+    name = random.choice(names.names) 
+    return jsonify(name)    
 
 @APP.route('/', methods=['GET', 'POST'])
 def index():
@@ -36,7 +46,7 @@ def index():
 
     name = request.form.get('player_name')
 
-    print("PLAYER_NAME", name)
+    #print("PLAYER_NAME", name)
     return render_template('purejs.html.tpl', player_name=name) 
     #return render_template('webgl.html.tpl', player_name=name) 
 
@@ -51,7 +61,7 @@ def sync_state():
     p.orientation = p_o
     p.position = [p_posx, p_posz]
 
-    print(str(p))
+    #print(str(p))
 
     p.save()
     

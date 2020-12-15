@@ -2,23 +2,33 @@
 function createUser() {
     var name = document.getElementById("player_name").innerText;
     if(name === "" ||  name === "None") {
-        var person = prompt("Please enter a name for your player", "Finky");
-        
-        var form = document.createElement("form");
 
-        form.method = "POST";
-        form.action = "/";   
+        var xhttp = new XMLHttpRequest();
+        var url = "/name_suggest";
+        var data = new FormData();
+        var i;
 
-        document.getElementById("player_name").innerText = person
-        var name = document.createElement("input"); 
-        name.value=person;
-        name.name="player_name";
-        form.appendChild(name);  
+        xhttp.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+                var name_suggestion = JSON.parse(this.responseText);
+                var person = prompt("Please enter a name for your player", name_suggestion);
+                var form = document.createElement("form");
 
-        document.body.appendChild(form);
+                form.method = "POST";
+                form.action = "/";   
 
-        form.submit();
-    }
+                document.getElementById("player_name").innerText = person
+                var name = document.createElement("input"); 
+                name.value=person;
+                name.name="player_name";
+                form.appendChild(name);  
+
+                document.body.appendChild(form);
+            }
+        }
+        xhttp.open("POST", url, true);
+        xhttp.send(data);
+   };
 }
 
 function syncState() {
@@ -32,7 +42,6 @@ function syncState() {
             var scene = JSON.parse(this.responseText);
             for (i = 0; i < scene.length; i++) {
                 document.getElementById(i).value = JSON.stringify(scene[i]);
-                //console.log(document.getElementById(i).value)
             }
         }
     };
@@ -42,7 +51,7 @@ function syncState() {
     var posx = Number(document.getElementById("o_trnx").value);
     var posz = Number(document.getElementById("o_trnz").value);
 
-    console.log(name + " " + orientation + " " + posx + " " + posz);
+    // console.log(name + " " + orientation + " " + posx + " " + posz);
 
     xhttp.open("POST", url, true);
     data.append('player_name', name);
@@ -54,24 +63,32 @@ function syncState() {
 }
 
 function handleKey(event){
+
+    var twopi = 3.14159 * 2;
     var ry = Number(document.getElementById("o_roty").value)  
     var tx = Number(document.getElementById("o_trnx").value)  
     var tz = Number(document.getElementById("o_trnz").value)  
     if(event.keyCode == 37){
         ry += 0.1;
+        if( ry > twopi) {
+            ry = 0.0;
+        }
     }
     if(event.keyCode == 38){
-        tz -= 0.1;
-        //tz -= Math.cos(ry) * 0.1;
-        //tx -= Math.sin(ry) * 0.1;
+        //tz -= 0.1;
+        tz += Math.cos(ry) * 0.1;
+        tx -= Math.sin(ry) * 0.1;
     }
     if(event.keyCode == 39){
         ry -= 0.1;
+        if (ry < 0.0) {
+            ry = twopi;
+        }
     }
     if(event.keyCode == 40){
-        tz +=  0.1;
-        //tz += Math.cos(ry) * 0.1;
-        //tx += Math.sin(ry) * 0.1;
+        //tz +=  0.1;
+        tz -= Math.cos(ry) * 0.1;
+        tx += Math.sin(ry) * 0.1;
     }
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
@@ -85,6 +102,7 @@ function handleKey(event){
     document.getElementById("o_trnx").value = tx 
     document.getElementById("o_trnz").value = tz 
 
+    syncState();
     window.requestAnimationFrame(step)
 }
 
@@ -159,7 +177,10 @@ function testFace(points, face){
 
     var cp = crossProduct(ax, ay, az, bx, by, bz);
 
-    if(cp[2] < 0){
+    if(cp[2] < 0 && points[face[0]][2] > 0 && 
+        points[face[1]][2] > 0 && 
+            points[face[2]][2] > 0 && 
+                points[face[3]][2] > 0){
         return true;
     } else {
         return false;
@@ -201,12 +222,7 @@ function worldTransform(shape, ry, tx, tz){
 }
 
 
-function cameraTransform(shape, ctx, points){
-    var wid = ctx.canvas.width;
-    var hei = ctx.canvas.height;
-
-    //console.log(wid, hei);
-
+function cameraTransform(shape, points) {
     var index;
     var coords = shape()[0]; 
     var rotcoords = shape()[0]; 
@@ -216,13 +232,25 @@ function cameraTransform(shape, ctx, points){
     var tx = Number(document.getElementById("o_trnx").value) 
     var tz = Number(document.getElementById("o_trnz").value)
 
-    for( index = 0; index < points.length; index++ ){
+    for( index = 0; index < points.length; index++ ) {
         rotcoords[index][0] = rotate[0][0] * points[index][0] + rotate[0][1] * points[index][1] + rotate[0][2] * points[index][2];    
         rotcoords[index][1] = rotate[1][0] * points[index][0] + rotate[1][1] * points[index][1] + rotate[1][2] * points[index][2];    
         rotcoords[index][2] = rotate[2][0] * points[index][0] + rotate[2][1] * points[index][1] + rotate[2][2] * points[index][2];
-        coords[index][0] = ((rotcoords[index][0]-tx)/(rotcoords[index][2]+tz))*hei+wid/2;
-        coords[index][1] = ((rotcoords[index][1])/(rotcoords[index][2]+tz))*hei+hei/2;
-        coords[index][2] = rotcoords[index][2]+tz;
+        coords[index][0] = rotcoords[index][0]-tx;
+        coords[index][1] = rotcoords[index][1];
+        coords[index][2] = rotcoords[index][2]-tz;
+    }
+    return coords;
+}
+
+function projection(shape, ctx, points) {
+    var wid = ctx.canvas.width;
+    var hei = ctx.canvas.height;
+    var coords = shape()[0]; 
+    for( index = 0; index < points.length; index++ ) {
+        coords[index][0] = ((points[index][0])/(points[index][2]))*hei+wid/2;
+        coords[index][1] = ((points[index][1])/(points[index][2]))*hei+hei/2;
+        coords[index][2] = points[index][2];
     }
     return coords;
 }
@@ -254,7 +282,8 @@ function drawBlast(ctx) {
     var tz = Number(document.getElementById("o_trnz").value)
 
     var coords = worldTransform( cube, ry, tx, tz);
-    var points = cameraTransform( cube, ctx, coords);
+    var temp = worldTransform( cube, coords);
+    var points = cameraTransform( cube, ctx, temp);
 
     ctx.moveTo(points[0][0], points[0][1]); 
     ctx.lineTo(points[4][0], points[4][1]); 
@@ -296,10 +325,11 @@ function drawGround(ctx) {
     var points1 = worldTransform(square, 0.0, 5.0, 5.0);
     var points2 = worldTransform(octagon, 0.0, -5.0, 5.0);
 
-    //console.log("WORLD "+points1);
+    var temp1 = cameraTransform(square, points1); 
+    var temp2 = cameraTransform(octagon, points2); 
 
-    var coords1 = cameraTransform(square, ctx, points1); 
-    var coords2 = cameraTransform(octagon, ctx, points2); 
+    var coords1 = projection(square, ctx, temp1);
+    var coords2 = projection(octagon, ctx, temp2);
 
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 1
@@ -307,20 +337,31 @@ function drawGround(ctx) {
     //console.log("CAMERA "+coords1);
 
     ctx.beginPath();
-    ctx.moveTo(coords1[squ_con[0][0]][0], coords1[squ_con[0][0]][1]);
-    for(i=1; i < squ_con[0].length; i++) {
-        ctx.lineTo(coords1[squ_con[0][i]][0], coords1[squ_con[0][i]][1]);
+    if(coords1[0][2] > 0.0){
+        ctx.moveTo(coords1[squ_con[0][0]][0], coords1[squ_con[0][0]][1]);
+        for(i=1; i < squ_con[0].length; i++) {
+            if(coords1[squ_con[0][i]][2] > 0 && coords1[squ_con[0][i-1]][2] > 0) {
+                ctx.lineTo(coords1[squ_con[0][i]][0], coords1[squ_con[0][i]][1]);
+            } else {
+                ctx.moveTo(coords1[squ_con[0][i]][0], coords1[squ_con[0][i]][1]);
+            }
+        }
+        ctx.closePath();
+        ctx.stroke();
     }
-    ctx.closePath();
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(coords2[oct_con[0][0]][0], coords2[oct_con[0][0]][1]);
-    for(i=1; i < oct_con[0].length; i++) {
-        ctx.lineTo(coords2[oct_con[0][i]][0], coords2[oct_con[0][i]][1]);
+    if(coords2[0][2] > 0.0){
+        ctx.beginPath();
+        ctx.moveTo(coords2[oct_con[0][0]][0], coords2[oct_con[0][0]][1]);
+        for(i=1; i < oct_con[0].length; i++) {
+            if(coords2[oct_con[0][i]][2] > 0 && coords2[oct_con[0][i-1]][2] > 0) {
+                ctx.lineTo(coords2[oct_con[0][i]][0], coords2[oct_con[0][i]][1]);
+            } else {    
+                ctx.moveTo(coords2[oct_con[0][i]][0], coords2[oct_con[0][i]][1]);
+            }
+        }
+        ctx.closePath();
+        ctx.stroke();
     }
-    ctx.closePath();
-    ctx.stroke();
 }
 
 function drawPlayer(ctx, points, player) {
@@ -329,7 +370,9 @@ function drawPlayer(ctx, points, player) {
 
     if(points[0][2] > 0.0) { 
         for( index = 0; index < connect.length; index++) {
-            drawFace(ctx, points, connect[index]);
+            if( points[0][2] > 0.0) {
+                drawFace(ctx, points, connect[index]);
+            }
         }
         var fontsize = 100/points[0][2];
 
@@ -353,11 +396,11 @@ function layoutPlayer(ctx, player) {
     var ry = player['orientation'];
 
     var coords = worldTransform(cube, ry, tx, tz);
-    var flat_coords = cameraTransform(cube, ctx, coords);
+    var temp = cameraTransform(cube,  coords);
+    var flat_coords = projection(cube, ctx,  temp);
 
     // console.log(flat_coords);
     var accum = 0;
-
 
     for( index = 0; index < flat_coords.length; index++ ) {
         accum+=flat_coords[index][2]; 
