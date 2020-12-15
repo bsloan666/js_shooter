@@ -71,8 +71,8 @@ function handleKey(event){
     var tz = Number(document.getElementById("o_trnz").value)  
     if(event.keyCode == 37){
         ry -= 0.05;
-        if( ry > twopi+halfpi) {
-            ry = halfpi;
+        if( ry < 0.0) {
+            ry = twopi;
         }
     }
     if(event.keyCode == 38){
@@ -81,8 +81,8 @@ function handleKey(event){
     }
     if(event.keyCode == 39){
         ry += 0.05;
-        if (ry < halfpi) {
-            ry = twopi+halfpi;
+        if (ry > twopi) {
+            ry = 0.0;
         }
     }
     if(event.keyCode == 40){
