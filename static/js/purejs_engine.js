@@ -65,30 +65,29 @@ function syncState() {
 function handleKey(event){
 
     var twopi = 3.14159 * 2;
+    var halfpi = 3.14159 / 2;
     var ry = Number(document.getElementById("o_roty").value)  
     var tx = Number(document.getElementById("o_trnx").value)  
     var tz = Number(document.getElementById("o_trnz").value)  
     if(event.keyCode == 37){
-        ry += 0.1;
-        if( ry > twopi) {
-            ry = 0.0;
+        ry -= 0.05;
+        if( ry > twopi+halfpi) {
+            ry = halfpi;
         }
     }
     if(event.keyCode == 38){
-        //tz -= 0.1;
-        tz += Math.cos(ry) * 0.1;
-        tx -= Math.sin(ry) * 0.1;
+        tz += Math.sin(ry+halfpi) * 0.1;
+        tx -= Math.cos(ry+halfpi) * 0.1;
     }
     if(event.keyCode == 39){
-        ry -= 0.1;
-        if (ry < 0.0) {
-            ry = twopi;
+        ry += 0.05;
+        if (ry < halfpi) {
+            ry = twopi+halfpi;
         }
     }
     if(event.keyCode == 40){
-        //tz +=  0.1;
-        tz -= Math.cos(ry) * 0.1;
-        tx += Math.sin(ry) * 0.1;
+        tz -= Math.sin(ry+halfpi) * 0.1;
+        tx += Math.cos(ry+halfpi) * 0.1;
     }
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
@@ -233,14 +232,20 @@ function cameraTransform(shape, points) {
     var tz = Number(document.getElementById("o_trnz").value)
 
     for( index = 0; index < points.length; index++ ) {
-        rotcoords[index][0] = rotate[0][0] * points[index][0] + rotate[0][1] * points[index][1] + rotate[0][2] * points[index][2];    
-        rotcoords[index][1] = rotate[1][0] * points[index][0] + rotate[1][1] * points[index][1] + rotate[1][2] * points[index][2];    
-        rotcoords[index][2] = rotate[2][0] * points[index][0] + rotate[2][1] * points[index][1] + rotate[2][2] * points[index][2];
-        coords[index][0] = rotcoords[index][0]-tx;
-        coords[index][1] = rotcoords[index][1];
-        coords[index][2] = rotcoords[index][2]-tz;
+        coords[index][0] = points[index][0]-tx;
+        coords[index][1] = points[index][1];
+        coords[index][2] = points[index][2]-tz;
+        rotcoords[index][0] = rotate[0][0] * coords[index][0] + rotate[0][1] * coords[index][1] + rotate[0][2] * coords[index][2];    
+        rotcoords[index][1] = rotate[1][0] * coords[index][0] + rotate[1][1] * coords[index][1] + rotate[1][2] * coords[index][2];    
+        rotcoords[index][2] = rotate[2][0] * coords[index][0] + rotate[2][1] * coords[index][1] + rotate[2][2] * coords[index][2];
+        //rotcoords[index][0] = rotate[0][0] * points[index][0] + rotate[0][1] * points[index][1] + rotate[0][2] * points[index][2];    
+        //rotcoords[index][1] = rotate[1][0] * points[index][0] + rotate[1][1] * points[index][1] + rotate[1][2] * points[index][2];    
+        //rotcoords[index][2] = rotate[2][0] * points[index][0] + rotate[2][1] * points[index][1] + rotate[2][2] * points[index][2];
+        //coords[index][0] = rotcoords[index][0]-tx;
+        //coords[index][1] = rotcoords[index][1];
+        //coords[index][2] = rotcoords[index][2]-tz;
     }
-    return coords;
+    return rotcoords;
 }
 
 function projection(shape, ctx, points) {
