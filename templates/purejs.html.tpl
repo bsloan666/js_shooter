@@ -33,6 +33,7 @@
 <input type="hidden" id="o_trny" value="0.0"/>
 <input type="hidden" id="o_trnz" value="5.1"/>
 <input type="hidden" id="blast_trnz" value="0.0"/>
+<input type="hidden" id="blast_trnx" value="0.0"/>
 <input type="hidden" id="is_blast" value="0"/>
 <br/>
 <script>

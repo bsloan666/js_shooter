@@ -238,12 +238,6 @@ function cameraTransform(shape, points) {
         rotcoords[index][0] = rotate[0][0] * coords[index][0] + rotate[0][1] * coords[index][1] + rotate[0][2] * coords[index][2];    
         rotcoords[index][1] = rotate[1][0] * coords[index][0] + rotate[1][1] * coords[index][1] + rotate[1][2] * coords[index][2];    
         rotcoords[index][2] = rotate[2][0] * coords[index][0] + rotate[2][1] * coords[index][1] + rotate[2][2] * coords[index][2];
-        //rotcoords[index][0] = rotate[0][0] * points[index][0] + rotate[0][1] * points[index][1] + rotate[0][2] * points[index][2];    
-        //rotcoords[index][1] = rotate[1][0] * points[index][0] + rotate[1][1] * points[index][1] + rotate[1][2] * points[index][2];    
-        //rotcoords[index][2] = rotate[2][0] * points[index][0] + rotate[2][1] * points[index][1] + rotate[2][2] * points[index][2];
-        //coords[index][0] = rotcoords[index][0]-tx;
-        //coords[index][1] = rotcoords[index][1];
-        //coords[index][2] = rotcoords[index][2]-tz;
     }
     return rotcoords;
 }
@@ -466,11 +460,13 @@ function drawAll() {
 
 function step(){
     var bz = Number(document.getElementById("blast_trnz").value) 
+    var bx = Number(document.getElementById("blast_trnx").value) 
     var gt = Number(document.getElementById("game_time").innerText) 
 
     gt+=1;
     if(Number(document.getElementById("is_blast").value) === 1) {
-        bz += 0.3;
+        bz += Math.sin(ry+halfpi) * 0.3;
+        bx -= Math.cos(ry+halfpi) * 0.3;
     }
     if( bz > 10) { 
         document.getElementById("is_blast").value = 0;
