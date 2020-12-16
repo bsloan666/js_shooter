@@ -91,12 +91,19 @@ function handleKey(event){
     }
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
-        document.getElementById("blast_trnz").value = 0.3
+        document.getElementById("blast_counter").value = 0 
+        var bx = document.getElementById("blast_trnx").value = document.getElementById("o_trnx").value; 
+        var bz = document.getElementById("blast_trnz").value = document.getElementById("o_trnz").value;
+        bz += Math.sin(ry+halfpi) * 0.3;
+        bx -= Math.cos(ry+halfpi) * 0.3;
+        document.getElementById("blast_trnx").value = bx
+        document.getElementById("blast_trnz").value = bz
         var audio = new Audio('static/audio/blast.ogg');
         audio.play();
         syncState();
     }
-    // console.log(event.keyCode)
+    //console.log(event.keyCode)
+    //
     document.getElementById("o_roty").value = ry 
     document.getElementById("o_trnx").value = tx 
     document.getElementById("o_trnz").value = tz 
@@ -275,26 +282,36 @@ function drawFace(ctx, points, face){
 
 function drawBlast(ctx) {
     var index;
-    var bz = Number(document.getElementById("blast_trnz").value)
+    var tx = Number(document.getElementById("blast_trnx").value)
+    var tz = Number(document.getElementById("blast_trnz").value)
     var ry = Number(document.getElementById("o_roty").value)
-    var tx = Number(document.getElementById("o_trnx").value)
-    var tz = Number(document.getElementById("o_trnz").value)
 
     var coords = worldTransform( cube, ry, tx, tz);
-    var temp = worldTransform( cube, coords);
-    var points = cameraTransform( cube, ctx, temp);
+    var temp = cameraTransform( cube, ctx, coords);
+    var points = projection( cube, ctx, temp);
 
+    ctx.beginPath();
     ctx.moveTo(points[0][0], points[0][1]); 
     ctx.lineTo(points[4][0], points[4][1]); 
+    ctx.closePath();
     ctx.stroke();
+
+    ctx.beginPath();
     ctx.moveTo(points[1][0], points[1][1]); 
     ctx.lineTo(points[5][0], points[5][1]); 
+    ctx.closePath();
     ctx.stroke();
+
+    ctx.beginPath();
     ctx.moveTo(points[2][0], points[2][1]); 
     ctx.lineTo(points[6][0], points[6][1]); 
+    ctx.closePath();
     ctx.stroke();
+
+    ctx.beginPath();
     ctx.moveTo(points[3][0], points[3][1]); 
     ctx.lineTo(points[7][0], points[7][1]); 
+    ctx.closePath();
     ctx.stroke();
 }
 
@@ -332,8 +349,6 @@ function drawGround(ctx) {
 
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 1
-
-    //console.log("CAMERA "+coords1);
 
     ctx.beginPath();
     if(coords1[0][2] > 0.0){
@@ -398,7 +413,6 @@ function layoutPlayer(ctx, player) {
     var temp = cameraTransform(cube,  coords);
     var flat_coords = projection(cube, ctx,  temp);
 
-    // console.log(flat_coords);
     var accum = 0;
 
     for( index = 0; index < flat_coords.length; index++ ) {
@@ -454,7 +468,7 @@ function drawAll() {
     
     var isBlast = Number(document.getElementById("is_blast").value);
     if(isBlast === 1) {
-        drawBlast(ctx, cnv_width, cnv_height)
+        drawBlast(ctx)
     }
 }
 
@@ -462,19 +476,37 @@ function step(){
     var bz = Number(document.getElementById("blast_trnz").value) 
     var bx = Number(document.getElementById("blast_trnx").value) 
     var gt = Number(document.getElementById("game_time").innerText) 
+    var ry = Number(document.getElementById("o_roty").value) 
+    var bcount = Number(document.getElementById("blast_counter").value) 
+    var is_blast = Number(document.getElementById("is_blast").value) 
+
+    var twopi = 3.14159 * 2;
+    var halfpi = 3.14159 / 2;
 
     gt+=1;
-    if(Number(document.getElementById("is_blast").value) === 1) {
+    if(is_blast === 1) {
         bz += Math.sin(ry+halfpi) * 0.3;
         bx -= Math.cos(ry+halfpi) * 0.3;
+        //bz -= Math.sin(ry+halfpi) * 0.3;
+        //bx += Math.cos(ry+halfpi) * 0.3;
+        bcount += 1
     }
-    if( bz > 10) { 
+    document.getElementById("blast_counter").value = bcount 
+    if( bcount > 50) { 
         document.getElementById("is_blast").value = 0;
+        document.getElementById("blast_counter").value = 0; 
     }
 
     document.getElementById("blast_trnz").value = bz 
+    document.getElementById("blast_trnx").value = bx 
     document.getElementById("game_time").innerText = gt 
+
     drawAll();
-    //window.requestAnimationFrame(step)
+
+    if( (bcount < 50) && (is_blast === 1) ) {
+        console.log("calling step");
+        window.requestAnimationFrame(step);
+    }    
 }
+
 window.requestAnimationFrame(step)
