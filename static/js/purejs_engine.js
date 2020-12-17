@@ -31,6 +31,14 @@ function createUser() {
    };
 }
 
+function vec3(_x, _y, _z){
+    var vec = new Object();
+    vec.x = _x;
+    vec.y = _y;
+    vec.z = _z;
+    return vec;
+}
+
 function syncState() {
     var xhttp = new XMLHttpRequest();
     var url = "/sync_state";
@@ -92,10 +100,10 @@ function handleKey(event){
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
         document.getElementById("blast_counter").value = 0 
-        var bx = document.getElementById("blast_trnx").value = document.getElementById("o_trnx").value; 
-        var bz = document.getElementById("blast_trnz").value = document.getElementById("o_trnz").value;
-        bz += Math.sin(ry+halfpi) * 0.3;
-        bx -= Math.cos(ry+halfpi) * 0.3;
+        var bx = document.getElementById("blast_trnx").value = tx; 
+        var bz = document.getElementById("blast_trnz").value = tz;
+        bz += Math.sin(ry+halfpi) * 0.6;
+        bx -= Math.cos(ry+halfpi) * 0.6;
         document.getElementById("blast_trnx").value = bx
         document.getElementById("blast_trnz").value = bz
         var audio = new Audio('static/audio/blast.ogg');
@@ -164,24 +172,26 @@ function cube() {
    return [positions, connectivity];
 }
 
-function crossProduct(ax, ay, az, bx, by, bz){
+function crossProduct(a, b){
     var result = [0.0, 0.0, 0.0];
-    result[0] = ay*bz - az*by;
-    result[1] = az*bx - ax*bz;
-    result[2] = ax*by - ay*bx;
+    result[0] = a.y*b.z - a.z*b.y;
+    result[1] = a.z*b.x - a.x*b.z;
+    result[2] = a.x*b.y - a.y*b.x;
     return result
 }
 
 function testFace(points, face){
     // determine if a face is front facing
-    var ax =  points[face[0]][0] - points[face[1]][0] 
-    var ay =  points[face[0]][1] - points[face[1]][1] 
-    var az =  points[face[0]][2] - points[face[1]][2] 
-    var bx =  points[face[2]][0] - points[face[1]][0] 
-    var by =  points[face[2]][1] - points[face[1]][1] 
-    var bz =  points[face[2]][2] - points[face[1]][2] 
+    var a = vec3( 
+        points[face[0]][0] - points[face[1]][0],
+        points[face[0]][1] - points[face[1]][1],
+        points[face[0]][2] - points[face[1]][2]);
+    var b = vec3(
+        points[face[2]][0] - points[face[1]][0], 
+        points[face[2]][1] - points[face[1]][1], 
+        points[face[2]][2] - points[face[1]][2]); 
 
-    var cp = crossProduct(ax, ay, az, bx, by, bz);
+    var cp = crossProduct(a, b);
 
     if(cp[2] < 0 && points[face[0]][2] > 0 && 
         points[face[1]][2] > 0 && 
@@ -281,15 +291,17 @@ function drawFace(ctx, points, face){
 
 
 function drawBlast(ctx) {
-    var index;
     var tx = Number(document.getElementById("blast_trnx").value)
     var tz = Number(document.getElementById("blast_trnz").value)
     var ry = Number(document.getElementById("o_roty").value)
 
     var coords = worldTransform( cube, ry, tx, tz);
-    var temp = cameraTransform( cube, ctx, coords);
+    var temp = cameraTransform( cube, coords);
     var points = projection( cube, ctx, temp);
 
+
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 1
     ctx.beginPath();
     ctx.moveTo(points[0][0], points[0][1]); 
     ctx.lineTo(points[4][0], points[4][1]); 
@@ -487,24 +499,22 @@ function step(){
     if(is_blast === 1) {
         bz += Math.sin(ry+halfpi) * 0.3;
         bx -= Math.cos(ry+halfpi) * 0.3;
-        //bz -= Math.sin(ry+halfpi) * 0.3;
-        //bx += Math.cos(ry+halfpi) * 0.3;
         bcount += 1
     }
-    document.getElementById("blast_counter").value = bcount 
-    if( bcount > 50) { 
-        document.getElementById("is_blast").value = 0;
-        document.getElementById("blast_counter").value = 0; 
-    }
 
-    document.getElementById("blast_trnz").value = bz 
-    document.getElementById("blast_trnx").value = bx 
-    document.getElementById("game_time").innerText = gt 
+    document.getElementById("blast_counter").value = bcount 
+    document.getElementById("blast_trnz").value = bz; 
+    document.getElementById("blast_trnx").value = bx;
+    document.getElementById("game_time").innerText = gt; 
 
     drawAll();
 
+    if( bcount > 50) { 
+        document.getElementById("is_blast").value = 0;
+        document.getElementById("blast_counter").value = 0; 
+        window.requestAnimationFrame(step);
+    }
     if( (bcount < 50) && (is_blast === 1) ) {
-        console.log("calling step");
         window.requestAnimationFrame(step);
     }    
 }
