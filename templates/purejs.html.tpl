@@ -16,26 +16,6 @@
 <div id="game_time" style="color: white; font-family: helvetica; display: inline;">0</div>
 </p>
 <canvas id="myCanvas" width="1024" height="640"></canvas><br/>
-<input type="hidden" class="player" id="0" value=""/>
-<input type="hidden" class="player" id="1" value=""/>
-<input type="hidden" class="player" id="2" value=""/>
-<input type="hidden" class="player" id="3" value=""/>
-<input type="hidden" class="player" id="4" value=""/>
-<input type="hidden" class="player" id="5" value=""/>
-<input type="hidden" class="player" id="6" value=""/>
-<input type="hidden" class="player" id="7" value=""/>
-<input type="hidden" class="player" id="8" value=""/>
-
-<input type="hidden" id="o_rotx" value="0.0"/>
-<input type="hidden" id="o_roty" value="0.0"/>
-<input type="hidden" id="o_rotz" value="0.0"/>
-<input type="hidden" id="o_trnx" value="0.0"/>
-<input type="hidden" id="o_trny" value="0.0"/>
-<input type="hidden" id="o_trnz" value="5.1"/>
-<input type="hidden" id="blast_trnz" value="0.0"/>
-<input type="hidden" id="blast_trnx" value="0.0"/>
-<input type="hidden" id="blast_counter" value="0"/>
-<input type="hidden" id="is_blast" value="0"/>
 <br/>
 <script>
 window.requestAnimationFrame(step)

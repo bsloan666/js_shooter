@@ -35,7 +35,7 @@ def name_suggest():
     """
     base = "http://{}/".format(request.environ['HTTP_HOST'])
     name = random.choice(names.names) 
-    return jsonify(name)    
+    return jsonify(name)
 
 @APP.route('/', methods=['GET', 'POST'])
 def index():
@@ -43,12 +43,18 @@ def index():
     main entrypoint
     """
     base = "http://{}/".format(request.environ['HTTP_HOST'])
-
     name = request.form.get('player_name')
+    return render_template('purejs.html.tpl', player_name=name)
 
-    #print("PLAYER_NAME", name)
-    return render_template('purejs.html.tpl', player_name=name) 
-    #return render_template('webgl.html.tpl', player_name=name) 
+
+@APP.route('/register_new_player', methods=['GET', 'POST'])
+def register_new_player():
+    name = request.form.get('player_name')
+    p = player.find(name)
+    p.save()
+    print("register_new_player",p.__dict__)
+    return jsonify(p.as_dict())    
+
 
 @APP.route('/sync_state', methods=['GET', 'POST'])
 def sync_state():
@@ -56,12 +62,13 @@ def sync_state():
     p_o= float(request.form.get('player_orientation'))
     p_posx = float(request.form.get('player_posx'))
     p_posz = float(request.form.get('player_posz'))
+    p_velx = float(request.form.get('player_velx'))
+    p_velz = float(request.form.get('player_velz'))
    
     p = player.find(name)
     p.orientation = p_o
     p.position = [p_posx, p_posz]
-
-    #print(str(p))
+    p.velocity = [p_velx, p_velz]
 
     p.save()
     

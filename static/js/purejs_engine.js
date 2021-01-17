@@ -3,6 +3,7 @@ function createUser() {
     var name = document.getElementById("player_name").innerText;
     if(name === "" ||  name === "None") {
 
+        var twopi = 3.14159 * 2;
         var xhttp = new XMLHttpRequest();
         var url = "/name_suggest";
         var data = new FormData();
@@ -24,6 +25,7 @@ function createUser() {
                 form.appendChild(name);  
 
                 document.body.appendChild(form);
+                registerNewPlayer(person);
             }
         }
         xhttp.open("POST", url, true);
@@ -31,12 +33,93 @@ function createUser() {
    };
 }
 
+
+function registerNewPlayer(name){
+    var xhttp = new XMLHttpRequest();
+    var url = "/register_new_player";
+    var data = new FormData();
+    
+    xhttp.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            var player = JSON.parse(this.responseText);
+            savePlayer(player);
+        }
+    }
+
+    data.append("player_name",name);  
+    xhttp.open("POST", url, true);
+    xhttp.send(data);
+}
+
+
 function vec3(_x, _y, _z){
     var vec = new Object();
     vec.x = _x;
     vec.y = _y;
     vec.z = _z;
     return vec;
+}
+
+function savePlayer(player) {
+    var storage = window.sessionStorage;
+    var ptest = storage.getItem(player['name'])
+
+    //console.log("savePlayer("+player['name']+") ");
+    if(!ptest){
+        var objectKeys = storage.getItem('objectKeys')
+        if (objectKeys) {
+            var objList = JSON.parse(objectKeys);
+            if( !objList.includes(player['name'])) {
+                objList.push(player['name'])
+            }
+        }
+        else
+        {
+            objList = [player['name']];
+            storage.setItem('objectKeys', JSON.stringify(objList));
+        }
+    }
+    storage.setItem(player['name'], JSON.stringify(player));
+}
+
+
+function loadPlayer(player_name) {
+    var storage = window.sessionStorage;
+    var pstring = storage.getItem(player_name);
+    //console.log("loadPlayer("+player_name+") "+pstring);
+    var player = JSON.parse(pstring);
+    return player;
+}
+
+
+function removePlayer(player_name) {
+    var storage = window.sessionStorage;
+    var ptest = storage.getItem(player_name);
+    if(ptest){
+        var objectKeys = storage.getItem('objectKeys')
+        if (objectKeys) {
+            var objList = JSON.parse(objectKeys);
+            if( objList.includes(player_name)) {
+                objList = objlst.filter(e => e !== player_name);
+                storage.setItem('objectKeys', JSON.stringify(objList));
+            }
+        }
+    }
+    storage.removeItem(player_name);
+}
+
+function getPlayers(){
+    var storage = window.sessionStorage;
+    var objectKeys = storage.getItem('objectKeys');
+    if (objectKeys) {
+        var objList = JSON.parse(objectKeys);
+        var plist = []
+        var i;
+        for (i = 0; i < objList.length; i++) {
+            plist.push(loadPlayer(objList[i]));
+        }
+    }
+    return plist; 
 }
 
 function syncState() {
@@ -49,34 +132,45 @@ function syncState() {
         if (this.readyState === 4 && this.status === 200) {
             var scene = JSON.parse(this.responseText);
             for (i = 0; i < scene.length; i++) {
-                document.getElementById(i).value = JSON.stringify(scene[i]);
+                savePlayer(scene[i]);
             }
         }
     };
 
     var name = document.getElementById("player_name").innerText;
-    var orientation = Number(document.getElementById("o_roty").value);
-    var posx = Number(document.getElementById("o_trnx").value);
-    var posz = Number(document.getElementById("o_trnz").value);
+    var my_player = loadPlayer(name);
 
     // console.log(name + " " + orientation + " " + posx + " " + posz);
 
     xhttp.open("POST", url, true);
-    data.append('player_name', name);
-    data.append('player_orientation', orientation);
-    data.append('player_posx', posx);
-    data.append('player_posz', posz);
+    data.append('player_name', my_player['name']);
+    data.append('player_orientation', my_player['orientation']);
+    data.append('player_posx', my_player['position'][0]);
+    data.append('player_posz',  my_player['position'][1]);
+    data.append('player_velx',  my_player['velocity'][0]);
+    data.append('player_velz',  my_player['velocity'][1]);
 
     xhttp.send(data);
 }
 
 function handleKey(event){
 
+    var storage = window.sessionStorage;
+    //var objectKeys = storage.getItem('objectKeys');
+    //var players = getPlayers();
+
+    //console.log("objectKeys: "+objectKeys);
+
     var twopi = 3.14159 * 2;
     var halfpi = 3.14159 / 2;
-    var ry = Number(document.getElementById("o_roty").value)  
-    var tx = Number(document.getElementById("o_trnx").value)  
-    var tz = Number(document.getElementById("o_trnz").value)  
+    var pname = document.getElementById("player_name").innerText  
+    var my_player = loadPlayer(pname);
+    //console.log("my_player: "+my_player+" "+pname);
+    var ry = Number(my_player['orientation'])  
+    var tx = Number(my_player['position'][0])  
+    var tz = Number(my_player['position'][1])  
+    var vx = Number(my_player['velocity'][0])  
+    var vz = Number(my_player['velocity'][1])  
     if(event.keyCode == 37){
         ry -= 0.05;
         if( ry < 0.0) {
@@ -84,8 +178,8 @@ function handleKey(event){
         }
     }
     if(event.keyCode == 38){
-        tz += Math.sin(ry+halfpi) * 0.1;
-        tx -= Math.cos(ry+halfpi) * 0.1;
+        vz += Math.sin(ry+halfpi) * 0.002;
+        vx -= Math.cos(ry+halfpi) * 0.002;
     }
     if(event.keyCode == 39){
         ry += 0.05;
@@ -94,8 +188,8 @@ function handleKey(event){
         }
     }
     if(event.keyCode == 40){
-        tz -= Math.sin(ry+halfpi) * 0.1;
-        tx += Math.cos(ry+halfpi) * 0.1;
+        vz -= Math.sin(ry+halfpi) * 0.002;
+        vx += Math.cos(ry+halfpi) * 0.002;
     }
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
@@ -108,13 +202,14 @@ function handleKey(event){
         document.getElementById("blast_trnz").value = bz
         var audio = new Audio('static/audio/blast.ogg');
         audio.play();
-        syncState();
     }
     //console.log(event.keyCode)
     //
-    document.getElementById("o_roty").value = ry 
-    document.getElementById("o_trnx").value = tx 
-    document.getElementById("o_trnz").value = tz 
+    my_player['orientation'] = ry 
+    my_player['velocity'][0] = vx 
+    my_player['velocity'][1] = vz 
+
+    savePlayer(my_player)
 
     syncState();
     window.requestAnimationFrame(step)
@@ -241,12 +336,14 @@ function worldTransform(shape, ry, tx, tz){
 function cameraTransform(shape, points) {
     var index;
     var coords = shape()[0]; 
-    var rotcoords = shape()[0]; 
-    var ry = Number(document.getElementById("o_roty").value)
+    var rotcoords = shape()[0];
+    var name = document.getElementById("player_name").innerText;
+    var me = loadPlayer(name);
+    var ry = Number(me['orientation'])
     var ang = [0.0, -ry, 0.0];
     var rotate = rotationMatrix(ang) 
-    var tx = Number(document.getElementById("o_trnx").value) 
-    var tz = Number(document.getElementById("o_trnz").value)
+    var tx = Number(me['position'][0]) 
+    var tz = Number(me['position'][1])
 
     for( index = 0; index < points.length; index++ ) {
         coords[index][0] = points[index][0]-tx;
@@ -445,7 +542,7 @@ function drawAll() {
     var index;
     var idx;
     var name = document.getElementById("player_name").innerText;
-    var players = document.getElementsByClassName('player');
+    var players = getPlayers();
     var depth;
     var coords;
     var temp;
@@ -454,14 +551,12 @@ function drawAll() {
     var player_depths = [];
     
     for( index = 0; index < players.length; index++) {
-        if(players[index].value != '') {
-            player = JSON.parse(players[index].value);
-            temp = layoutPlayer(ctx, player);
-            depth = temp[0];
-            coords = temp[1];
-            pos_buffer.push(coords)
-            player_depths.push(depth);
-        }
+        player = players[index];
+        temp = layoutPlayer(ctx, player);
+        depth = temp[0];
+        coords = temp[1];
+        pos_buffer.push(coords)
+        player_depths.push(depth);
     }
 
     var depth_sort = depthSort(player_depths);
@@ -469,54 +564,67 @@ function drawAll() {
     for( index = 0; index < depth_sort.length; index++) {
         idx = depth_sort[index];
         if(idx >=0) {
-            if(players[idx].value != '') {
-                player = JSON.parse(players[idx].value);
-                if(player['name'] != name) {
-                    drawPlayer(ctx, pos_buffer[idx], player);
-                }
+            player = players[idx];
+            if(player['name'] != name) {
+                drawPlayer(ctx, pos_buffer[idx], player);
             }
         }
     }
     
-    var isBlast = Number(document.getElementById("is_blast").value);
-    if(isBlast === 1) {
-        drawBlast(ctx)
-    }
+    //var isBlast = Number(document.getElementById("is_blast").value);
+    //if(isBlast === 1) {
+    //    drawBlast(ctx)
+    //}
+}
+
+function doCollisions() {
+
 }
 
 function step(){
-    var bz = Number(document.getElementById("blast_trnz").value) 
-    var bx = Number(document.getElementById("blast_trnx").value) 
+    //var bz = Number(document.getElementById("blast_trnz").value) 
+    //var bx = Number(document.getElementById("blast_trnx").value) 
     var gt = Number(document.getElementById("game_time").innerText) 
-    var ry = Number(document.getElementById("o_roty").value) 
-    var bcount = Number(document.getElementById("blast_counter").value) 
-    var is_blast = Number(document.getElementById("is_blast").value) 
-
+    var pname = Number(document.getElementById("player_name").innerText) 
+    //var ry = Number(document.getElementById("o_roty").value) 
+    //var bcount = Number(document.getElementById("blast_counter").value) 
+    //var is_blast = Number(document.getElementById("is_blast").value) 
+    //var players = document.getElementsByClassName('player');
+    var index;
     var twopi = 3.14159 * 2;
     var halfpi = 3.14159 / 2;
 
     gt+=1;
+    /*
     if(is_blast === 1) {
         bz += Math.sin(ry+halfpi) * 0.3;
         bx -= Math.cos(ry+halfpi) * 0.3;
         bcount += 1
     }
+    */
+    var players = getPlayers();
 
-    document.getElementById("blast_counter").value = bcount 
-    document.getElementById("blast_trnz").value = bz; 
-    document.getElementById("blast_trnx").value = bx;
+    for( index = 0; index < players.length; index++) {
+        if(players[index].value != '') {
+            players[index]['position'][0] += players[index]['velocity'][0];
+            players[index]['position'][1] += players[index]['velocity'][1];
+            savePlayer(players[index]);
+        }
+    }
+
+    //document.getElementById("blast_counter").value = bcount 
+    //document.getElementById("blast_trnz").value = bz; 
+    //document.getElementById("blast_trnx").value = bx;
     document.getElementById("game_time").innerText = gt; 
 
+    doCollisions();
     drawAll();
 
-    if( bcount > 50) { 
-        document.getElementById("is_blast").value = 0;
-        document.getElementById("blast_counter").value = 0; 
-        window.requestAnimationFrame(step);
-    }
-    if( (bcount < 50) && (is_blast === 1) ) {
-        window.requestAnimationFrame(step);
-    }    
+    //if( bcount > 50) { 
+    //    document.getElementById("is_blast").value = 0;
+    //    document.getElementById("blast_counter").value = 0; 
+    //}
+    window.requestAnimationFrame(step);
 }
 
 window.requestAnimationFrame(step)
