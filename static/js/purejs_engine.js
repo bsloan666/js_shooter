@@ -111,9 +111,9 @@ function removePlayer(player_name) {
 function getPlayers(){
     var storage = window.sessionStorage;
     var objectKeys = storage.getItem('objectKeys');
+    var plist = []
     if (objectKeys) {
         var objList = JSON.parse(objectKeys);
-        var plist = []
         var i;
         for (i = 0; i < objList.length; i++) {
             plist.push(loadPlayer(objList[i]));
@@ -143,19 +143,19 @@ function syncState() {
     // console.log(name + " " + orientation + " " + posx + " " + posz);
 
     xhttp.open("POST", url, true);
-    data.append('player_name', my_player['name']);
-    data.append('player_orientation', my_player['orientation']);
-    data.append('player_posx', my_player['position'][0]);
-    data.append('player_posz',  my_player['position'][1]);
-    data.append('player_velx',  my_player['velocity'][0]);
-    data.append('player_velz',  my_player['velocity'][1]);
+    data.append('name', my_player['name']);
+    data.append('orientation', my_player['orientation']);
+    data.append('position_x', my_player['position'][0]);
+    data.append('position_z',  my_player['position'][1]);
+    data.append('linear_velocity_x',  my_player['linear_velocity'][0]);
+    data.append('linear_velocity_z',  my_player['linear_velocity'][1]);
+    data.append('angular_velocity',  my_player['angular_velocity']);
 
     xhttp.send(data);
 }
 
 function handleKey(event){
 
-    var storage = window.sessionStorage;
     //var objectKeys = storage.getItem('objectKeys');
     //var players = getPlayers();
 
@@ -169,27 +169,25 @@ function handleKey(event){
     var ry = Number(my_player['orientation'])  
     var tx = Number(my_player['position'][0])  
     var tz = Number(my_player['position'][1])  
-    var vx = Number(my_player['velocity'][0])  
-    var vz = Number(my_player['velocity'][1])  
+    var vx = Number(my_player['linear_velocity'][0])  
+    var vz = Number(my_player['linear_velocity'][1])  
+    var vy = Number(my_player['angular_velocity']) 
+    var lin_vel_mag = 0.05;
+    var ang_vel_mag = 0.01;
+
     if(event.keyCode == 37){
-        ry -= 0.05;
-        if( ry < 0.0) {
-            ry = twopi;
-        }
+        vy -= ang_vel_mag;
     }
     if(event.keyCode == 38){
-        vz += Math.sin(ry+halfpi) * 0.002;
-        vx -= Math.cos(ry+halfpi) * 0.002;
+        vz += Math.sin(ry+halfpi) * lin_vel_mag;
+        vx -= Math.cos(ry+halfpi) * lin_vel_mag;
     }
     if(event.keyCode == 39){
-        ry += 0.05;
-        if (ry > twopi) {
-            ry = 0.0;
-        }
+        vy += ang_vel_mag;
     }
     if(event.keyCode == 40){
-        vz -= Math.sin(ry+halfpi) * 0.002;
-        vx += Math.cos(ry+halfpi) * 0.002;
+        vz -= Math.sin(ry+halfpi) * lin_vel_mag;
+        vx += Math.cos(ry+halfpi) * lin_vel_mag;
     }
     if(event.keyCode == 32){
         document.getElementById("is_blast").value = 1 
@@ -206,12 +204,13 @@ function handleKey(event){
     //console.log(event.keyCode)
     //
     my_player['orientation'] = ry 
-    my_player['velocity'][0] = vx 
-    my_player['velocity'][1] = vz 
+    my_player['linear_velocity'][0] = vx 
+    my_player['linear_velocity'][1] = vz 
+    my_player['angular_velocity'] = vy 
 
     savePlayer(my_player)
 
-    syncState();
+    //syncState();
     window.requestAnimationFrame(step)
 }
 
@@ -337,8 +336,13 @@ function cameraTransform(shape, points) {
     var index;
     var coords = shape()[0]; 
     var rotcoords = shape()[0];
+    var nyncS
     var name = document.getElementById("player_name").innerText;
     var me = loadPlayer(name);
+
+    if(me == null){
+        return rotcoords;
+    }
     var ry = Number(me['orientation'])
     var ang = [0.0, -ry, 0.0];
     var rotate = rotationMatrix(ang) 
@@ -593,8 +597,16 @@ function step(){
     var index;
     var twopi = 3.14159 * 2;
     var halfpi = 3.14159 / 2;
+    var decay = 0.97;
 
     gt+=1;
+    var players = getPlayers();
+
+    if((gt % 30) == 0) 
+    {
+        //syncState();
+
+    }
     /*
     if(is_blast === 1) {
         bz += Math.sin(ry+halfpi) * 0.3;
@@ -602,14 +614,22 @@ function step(){
         bcount += 1
     }
     */
-    var players = getPlayers();
 
     for( index = 0; index < players.length; index++) {
-        if(players[index].value != '') {
-            players[index]['position'][0] += players[index]['velocity'][0];
-            players[index]['position'][1] += players[index]['velocity'][1];
-            savePlayer(players[index]);
+        players[index]['position'][0] += players[index]['linear_velocity'][0];
+        players[index]['position'][1] += players[index]['linear_velocity'][1];
+        players[index]['orientation'] += players[index]['angular_velocity'];
+        players[index]['linear_velocity'][0] *= decay;
+        players[index]['linear_velocity'][1] *= decay;
+        players[index]['angular_velocity'] *= decay;
+        if (players[index]['orientation']  > twopi) {
+            players[index]['orientation']  = 0.0;
         }
+        if (players[index]['orientation']  < 0.0) {
+            players[index]['orientation']  = twopi;
+        }
+
+        savePlayer(players[index]);
     }
 
     //document.getElementById("blast_counter").value = bcount 

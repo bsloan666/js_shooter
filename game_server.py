@@ -59,26 +59,30 @@ def register_new_player():
 @APP.route('/sync_state', methods=['GET', 'POST'])
 def sync_state():
     name = request.form.get('player_name')
-    p_o= float(request.form.get('player_orientation'))
-    p_posx = float(request.form.get('player_posx'))
-    p_posz = float(request.form.get('player_posz'))
-    p_velx = float(request.form.get('player_velx'))
-    p_velz = float(request.form.get('player_velz'))
+    p_o= float(request.form.get('orientation'))
+    p_posx = float(request.form.get('position_x'))
+    p_posz = float(request.form.get('position_z'))
+    p_velx = float(request.form.get('linear_velocity_x'))
+    p_velz = float(request.form.get('linear_velocity_z'))
+    p_ang = float(request.form.get('angular_velocity'))
    
     p = player.find(name)
     p.orientation = p_o
     p.position = [p_posx, p_posz]
-    p.velocity = [p_velx, p_velz]
+    p.linear_velocity = [p_velx, p_velz]
+    p.angular_velocity = p_ang
 
     p.save()
     
     r = player.redis_instance()
     items = []
+    names = []
     for key in r.scan_iter("*"):
         p = player.Player("")
         p.from_json(r.get(key))
         items.append(p.as_dict())
-
+        names.append(p.name)
+    print("Tracking:",names)
     return jsonify(items)    
 
 if __name__ == '__main__':

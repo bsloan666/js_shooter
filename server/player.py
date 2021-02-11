@@ -11,7 +11,8 @@ class Player():
         twopi = 3.14159 * 2
         self.name = name
         self.position = [(random.random()-0.5) * 10, (random.random()-0.5) * 10] 
-        self.velocity = [0.0, 0.0] 
+        self.linear_velocity = [0.0, 0.0] 
+        self.angular_velocity = 0.0 
         # some direction around the Y axis
         self.orientation = random.random() * twopi
         self.health = 100 
@@ -24,7 +25,8 @@ class Player():
         return json.dumps({
             'name': self.name,
             'position': self.position,
-            'velocity': self.velocity,
+            'linear_velocity': self.linear_velocity,
+            'angular_velocity': self.angular_velocity,
             'orientation': self.orientation,
             'health': self.health,
             'score': self.score
@@ -34,7 +36,8 @@ class Player():
         indict = json.loads(instr)
         self.name = indict['name']
         self.position = indict['position']
-        self.velocity = indict['velocity']
+        self.linear_velocity = indict['linear_velocity']
+        self.angular_velocity = indict['angular_velocity']
         self.orientation = indict['orientation']
         self.health = indict['health']
         self.score = indict['score']
@@ -58,12 +61,12 @@ def redis_instance():
 
 if  __name__ == "__main__":
     red = redis.Redis()
-    red.flushdb()
 
 
     for key in red.scan_iter("*"):
         print(key)
 
+    red.flushdb()
 
 
         
