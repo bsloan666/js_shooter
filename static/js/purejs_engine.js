@@ -26,6 +26,9 @@ function createUser() {
 
                 document.body.appendChild(form);
                 registerNewPlayer(person);
+                // make a dummy player for testing collision and game play
+                savePlayer(JSON.parse('{"name": "Sylvester", "position": [0.0, 0.0], "linear_velocity": [0.001, 0.001], "angular_velocity": 0.005, "orientation": 3.3754799557637205, "health": 100, "score": 0}'))
+
             }
         }
         xhttp.open("POST", url, true);
@@ -597,7 +600,7 @@ function step(){
     var index;
     var twopi = 3.14159 * 2;
     var halfpi = 3.14159 / 2;
-    var decay = 0.97;
+    var decay = 0.995
 
     gt+=1;
     var players = getPlayers();
@@ -605,7 +608,6 @@ function step(){
     if((gt % 30) == 0) 
     {
         //syncState();
-
     }
     /*
     if(is_blast === 1) {

@@ -55,6 +55,23 @@ def register_new_player():
     print("register_new_player",p.__dict__)
     return jsonify(p.as_dict())    
 
+def update_pos_and_dir(player):
+    twopi = 3.14159 * 2
+    decay = 0.999
+
+    player['position'][0] += player['linear_velocity'][0] * 30
+    player['position'][1] += player['linear_velocity'][1] * 30
+    player['orientation'] += player['angular_velocity'] * 30
+    player['linear_velocity'][0] *= decay
+    player['linear_velocity'][1] *= decay
+    player['angular_velocity'] *= decay
+    if (player['orientation']  > twopi):
+        player['orientation']  = 0.0
+    if (player['orientation']  < 0.0): 
+        player['orientation']  = twopi
+    return player
+
+
 
 @APP.route('/sync_state', methods=['GET', 'POST'])
 def sync_state():
@@ -80,7 +97,8 @@ def sync_state():
     for key in r.scan_iter("*"):
         p = player.Player("")
         p.from_json(r.get(key))
-        items.append(p.as_dict())
+        pdict = update_pos_and_dir(p.as_dict())
+        items.append(pdict)
         names.append(p.name)
     print("Tracking:",names)
     return jsonify(items)    
